@@ -1,6 +1,6 @@
 # belllla_web
 
-
+> 已配置：每次提交后自动推送到 GitLab
 
 ## Getting started
 
