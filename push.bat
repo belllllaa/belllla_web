@@ -3,8 +3,9 @@ chcp 65001 >nul
 setlocal
 
 REM 确保能找到 Git（解决终端 PATH 未刷新的问题）
-if exist "C:\Program Files\Git\cmd\git.exe" (
-    set "PATH=C:\Program Files\Git\cmd;%PATH%"
+set "GIT_PATH=C:\Program Files\Git\cmd"
+if exist "%GIT_PATH%\git.exe" (
+    set "PATH=%GIT_PATH%;%PATH%"
 )
 
 if "%~1"=="" (
