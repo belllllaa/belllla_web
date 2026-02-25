@@ -1,5 +1,9 @@
+# GitLab Pages 部署配置
+# 部署后访问: https://bellllla.gitlab.io/belllla_web/
+
 pages:
   stage: deploy
+  image: alpine:latest
   script:
     - mkdir -p public
     - cp lishui-trip.html public/index.html
