@@ -5,8 +5,10 @@ pages:
   stage: deploy
   image: alpine:latest
   script:
+    - ls -la
     - mkdir -p public
     - cp lishui-trip.html public/index.html
+    - ls -la public/
   artifacts:
     paths:
       - public
