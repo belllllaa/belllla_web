@@ -1,0 +1,19 @@
+---
+description: 量化策略开发时参考开源项目索引与 references 下的克隆仓库
+globs: "**/strategies_old/*.py,**/qmt/**/*.py"
+alwaysApply: false
+---
+
+# 量化开源项目参考
+
+当用户开发或修改 **QMT 量化策略**（选股、横盘突破、动量、风控等）时：
+
+1. **优先参考本仓库索引**：项目内完整索引见 `docs/quant_open_source_projects.md`，其中列出：
+   - 国内 A 股：Sequoia（海龟/缠论）、vnpy/strategy-vnpy、选股器 xuanguqi、InStock、Stock-picking-strategy
+   - 通用框架：backtrader、Qantify、StratVector 等
+
+2. **本地克隆目录**：若存在 `references/` 下的克隆（如 `references/strategy-vnpy`），在用户询问策略逻辑、出场规则、因子设计时，可主动引用其中相关策略代码或思路，并改写成 QMT 可用实现。
+
+3. **对接方式**：这些开源项目的数据/交易接口与 QMT 不同，仅借鉴「选股条件、止损规则、指标计算、仓位管理」等逻辑，用 QMT 的 `get_market_data_ex`、`passorder` 等实现。
+
+4. **用户说「参考开源」「按某某项目改」时**：先查 `docs/quant_open_source_projects.md` 定位项目与链接，再结合 `references/` 下是否有对应代码，给出可落地的 QMT 策略修改建议。

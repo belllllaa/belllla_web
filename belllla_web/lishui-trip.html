@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>丽水古堰画乡 · 周末踏板之旅</title>
+  <meta name="description" content="3月6日上海出发，丽水古堰画乡2天2夜踏板车自驾行程，含通济堰、画乡老街、云和梯田路线与交通时间">
+  <meta property="og:title" content="丽水古堰画乡 · 周末踏板之旅">
+  <meta property="og:description" content="上海→丽水高铁→古堰画乡→云和梯田，2天2夜踏板车自驾行程规划">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --accent: #4ecdc4;
+      --accent-dim: #3db8b0;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --border: #30363d;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    .header {
+      padding: 2rem;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .header h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+    .header .sub {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card h2 {
+      font-size: 1.1rem;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .card h2::before {
+      content: "";
+      width: 4px;
+      height: 1.2em;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+    .timeline {
+      list-style: none;
+    }
+    .timeline li {
+      display: flex;
+      gap: 1rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .timeline li:last-child { border-bottom: none; }
+    .time {
+      flex-shrink: 0;
+      width: 5rem;
+      color: var(--accent-dim);
+      font-weight: 500;
+    }
+    .content { flex: 1; }
+    .content strong { color: var(--text); }
+    .content .addr {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+    .content .dur {
+      font-size: 0.8rem;
+      color: var(--accent-dim);
+    }
+    #map {
+      height: 400px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-top: 1rem;
+    }
+    .tips {
+      background: rgba(78, 205, 196, 0.08);
+      border: 1px solid rgba(78, 205, 196, 0.2);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+    .tips strong { color: var(--accent); }
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>丽水古堰画乡 · 周末踏板之旅</h1>
+    <p class="sub">3月6日 上海出发 · 周末2天2夜 · 踏板车自驾</p>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2>行程概览</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">
+        上海虹桥 → 丽水站（高铁）→ 取踏板车 → 古堰画乡住宿 → 2天深度游 → 丽水站还车/停车 → 高铁回沪
+      </p>
+      <ul class="timeline">
+        <li>
+          <span class="time">Day 0</span>
+          <div class="content">
+            <strong>踏板托运</strong> · 提前将踏板车托运至丽水站，到站后取车
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>第一天 · 3月6日（周五）</h2>
+      <ul class="timeline">
+        <li>
+          <span class="time">06:20</span>
+          <div class="content">
+            <strong>上海虹桥站</strong> 乘 G7333 出发
+            <div class="addr">上海市闵行区申虹路</div>
+          </div>
+        </li>
+        <li>
+          <span class="time">09:11</span>
+          <div class="content">
+            <strong>抵达丽水站</strong> · 取踏板车、办理托运交接
+            <div class="addr">浙江省丽水市莲都区丽水站 · 28.4514°N, 119.9228°E</div>
+            <div class="dur">车程约 2h51min · 二等座约 163 元</div>
+          </div>
+        </li>
+        <li>
+          <span class="time">09:30</span>
+          <div class="content">
+            <strong>丽水站 → 古堰画乡</strong>
+            <div class="addr">经 S328 省道 · 约 28km</div>
+            <div class="dur">踏板车程约 45–50 分钟</div>
+          </div>
+        </li>
+        <li>
+          <span class="time">10:20</span>
+          <div class="content">
+            <strong>抵达古堰画乡 · 办理入住</strong>
+            <div class="addr">莲都区大港头镇/碧湖镇 · 28.3438°N, 119.7578°E</div>
+          </div>
+        </li>
+        <li>
+          <span class="time">11:00</span>
+          <div class="content">
+            <strong>通济堰景区</strong> · 千年水利工程、古樟树群、文昌阁
+            <div class="addr">莲都区碧湖镇堰头村 · 28.3492°N, 119.7456°E</div>
+            <div class="dur">游览约 1.5–2 小时</div>
+          </div>
+        </li>
+        <li>
+          <span class="time">13:00</span>
+          <div class="content">
+            <strong>午餐</strong> · 瓯江三鲜、缙云烧饼
+            <div class="addr">江畔拾光 / 蓝染书屋 等 · 人均约 60 元</div>
+          </div>
+        </li>
+        <li>
+          <span class="time">14:30</span>
+          <div class="content">
+            <strong>画舫游瓯江</strong> · 古堰 ↔ 画乡 渡船
+            <div class="addr">单程约 20 分钟 · 30 元/人</div>
+          </div>
+        </li>
+        <li>
+          <span class="time">15:30</span>
+          <div class="content">
+            <strong>画乡老街</strong> · 江滨古街、丽水油画院、艺术工坊
+            <div class="addr">大港头镇画乡主街 · 28.3422°N, 119.7567°E</div>
+            <div class="dur">自由游览 2–3 小时</div>
+          </div>
+        </li>
+        <li>
+          <span class="time">18:30</span>
+          <div class="content">
+            <strong>晚餐 + 夜景</strong> · 江畔夜景、民宿休息
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>第二天 · 3月7日（周六）</h2>
+      <ul class="timeline">
+        <li>
+          <span class="time">08:00</span>
+          <div class="content">
+            <strong>早餐</strong> · 民宿或老街早餐
+          </div>
+        </li>
+        <li>
+          <span class="time">09:00</span>
+          <div class="content">
+            <strong>古堰画乡 → 云和梯田</strong>（可选）
+            <div class="addr">经 S328 → 云和县 · 约 65km</div>
+            <div class="dur">踏板车程约 1h10min · 华东最大梯田群</div>
+          </div>
+        </li>
+        <li>
+          <span class="time">10:30</span>
+          <div class="content">
+            <strong>云和梯田景区</strong>
+            <div class="addr">丽水市云和县崇头镇 · 28.1156°N, 119.5634°E</div>
+            <div class="dur">游览 2–3 小时 · 门票约 80 元</div>
+          </div>
+        </li>
+        <li>
+          <span class="time">13:00</span>
+          <div class="content">
+            <strong>返程 云和 → 古堰画乡</strong>
+            <div class="addr">经 S328 · 约 65km</div>
+            <div class="dur">踏板车程约 1h10min</div>
+          </div>
+        </li>
+        <li>
+          <span class="time">14:30</span>
+          <div class="content">
+            <strong>画乡艺术工坊</strong> · 油画临摹 / 陶艺 / 蓝染体验
+            <div class="addr">画乡老街 · 80–120 元/项</div>
+          </div>
+        </li>
+        <li>
+          <span class="time">18:00</span>
+          <div class="content">
+            <strong>晚餐 + 江畔夜景</strong>
+          </div>
+        </li>
+      </ul>
+      <div class="tips">
+        <strong>备选方案：</strong>若云和梯田较远，可改为古堰画乡深度游：上午艺术工坊（油画/陶艺/蓝染），下午周边古村落（堰头村、大港头村）骑行探访。
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>第三天 · 3月8日（周日）返沪</h2>
+      <ul class="timeline">
+        <li>
+          <span class="time">08:00</span>
+          <div class="content">
+            <strong>早餐 + 退房</strong>
+          </div>
+        </li>
+        <li>
+          <span class="time">09:00</span>
+          <div class="content">
+            <strong>古堰画乡 → 丽水站</strong>
+            <div class="addr">约 28km · 踏板车程 45–50 分钟</div>
+          </div>
+        </li>
+        <li>
+          <span class="time">10:00</span>
+          <div class="content">
+            <strong>抵达丽水站</strong> · 踏板停高铁停车场 / 办理托运
+            <div class="addr">临时停放约 10 元/天</div>
+          </div>
+        </li>
+        <li>
+          <span class="time">11:00</span>
+          <div class="content">
+            <strong>丽水站 → 上海虹桥</strong> · 乘高铁返沪
+            <div class="dur">约 2.5–3 小时 · 二等座约 163 元</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>游玩路线地图</h2>
+      <div id="map"></div>
+      <div class="tips">
+        <strong>定位点：</strong>① 丽水站 ② 古堰画乡 ③ 通济堰 ④ 画乡老街 ⑤ 云和梯田（次日）
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>实用信息</h2>
+      <ul class="timeline">
+        <li>
+          <span class="time">交通</span>
+          <div class="content">
+            踏板托运建议提前联系中铁快运或物流；丽水站停车场可临时停放，约 10 元/天
+          </div>
+        </li>
+        <li>
+          <span class="time">住宿</span>
+          <div class="content">
+            古堰画乡民宿集中在大港头镇、堰头村，建议提前预订
+          </div>
+        </li>
+        <li>
+          <span class="time">美食</span>
+          <div class="content">
+            瓯江三鲜、缙云烧饼、松阳银猴茶
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <footer class="footer">
+    丽水古堰画乡 · 2 天踏板之旅 · 行程仅供参考，请以实际为准
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([28.35, 119.75], 10);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap, &copy; CARTO'
+    }).addTo(map);
+
+    const points = [
+      { name: '丽水站', pos: [28.4514, 119.9228], icon: '🚄' },
+      { name: '古堰画乡', pos: [28.3438, 119.7578], icon: '🏠' },
+      { name: '通济堰', pos: [28.3492, 119.7456], icon: '🏛️' },
+      { name: '画乡老街', pos: [28.3422, 119.7567], icon: '🛤️' },
+      { name: '云和梯田', pos: [28.1156, 119.5634], icon: '🌾' }
+    ];
+
+    points.forEach((p, i) => {
+      L.marker(p.pos).addTo(map)
+        .bindPopup(`<b>${p.icon} ${p.name}</b><br>${p.pos[0].toFixed(4)}°N, ${p.pos[1].toFixed(4)}°E`);
+    });
+
+    const route = [
+      [28.4514, 119.9228],
+      [28.3438, 119.7578],
+      [28.3492, 119.7456],
+      [28.3422, 119.7567],
+      [28.1156, 119.5634]
+    ];
+    L.polyline(route, { color: '#4ecdc4', weight: 3, opacity: 0.8 }).addTo(map);
+    map.fitBounds(route, { padding: [30, 30] });
+  </script>
+</body>
+</html>
