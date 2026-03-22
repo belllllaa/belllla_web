@@ -1,0 +1,17 @@
+# Product Requirements Document (PRD)
+# 在此填写你的产品/项目需求，Task Master 会根据此文件生成任务列表。
+# 填写完成后，在对话中说：Parse my PRD at .taskmaster/docs/prd.txt
+
+## 项目概述
+（简要描述项目目标）
+
+## 功能需求
+1. 
+2. 
+3. 
+
+## 非功能需求
+（性能、安全、兼容性等）
+
+## 验收标准
+（完成的标准是什么）

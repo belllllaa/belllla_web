@@ -1,0 +1,7 @@
+requests>=2.28
+pandas>=2.0
+openpyxl>=3.0
+# 可选：安装后直连东方财富更稳定（模拟浏览器 TLS，解决 RemoteDisconnected）
+curl_cffi>=0.5.0
+# 可选：浏览器自动翻页保存 JSON（pip install playwright && playwright install chromium）
+playwright>=1.40

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub 高星开源项目</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    h1 {
+      color: #58a6ff;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+    }
+    .link-bar {
+      margin-bottom: 2rem;
+      padding: 1rem;
+      background: #161b22;
+      border-radius: 8px;
+      border: 1px solid #30363d;
+    }
+    .link-bar a {
+      color: #58a6ff;
+      text-decoration: none;
+    }
+    .link-bar a:hover { text-decoration: underline; }
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .item {
+      display: block;
+      padding: 1rem 1.25rem;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: inherit;
+      text-decoration: none;
+      transition: border-color 0.2s;
+    }
+    .item:hover {
+      border-color: #58a6ff;
+    }
+    .item .name {
+      font-weight: 600;
+      color: #58a6ff;
+      margin-bottom: 0.35rem;
+    }
+    .item .desc {
+      font-size: 0.9rem;
+      color: #8b949e;
+      margin-bottom: 0.5rem;
+    }
+    .item .meta {
+      font-size: 0.85rem;
+      color: #6e7681;
+    }
+    .item .stars {
+      color: #f0883e;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <h1>GitHub 星星数最高的开源项目</h1>
+  
+  <div class="link-bar">
+    <strong>直接搜索：</strong>
+    <a href="https://github.com/search?q=stars%3A%3E10000&s=stars&type=repositories" target="_blank">
+      GitHub 搜索：stars &gt; 10000
+    </a>
+  </div>
+
+  <div class="list">
+    <a class="item" href="https://github.com/codecrafters-io/build-your-own-x" target="_blank">
+      <div class="name">codecrafters-io/build-your-own-x</div>
+      <div class="desc">从零实现各种技术：数据库、操作系统、编译器、游戏等</div>
+      <div class="meta"><span class="stars">★ 473k</span> · Markdown · 编程教程</div>
+    </a>
+    <a class="item" href="https://github.com/sindresorhus/awesome" target="_blank">
+      <div class="name">sindresorhus/awesome</div>
+      <div class="desc">各类主题的精选资源列表合集</div>
+      <div class="meta"><span class="stars">★ 444k</span> · 资源列表</div>
+    </a>
+    <a class="item" href="https://github.com/freeCodeCamp/freeCodeCamp" target="_blank">
+      <div class="name">freeCodeCamp/freeCodeCamp</div>
+      <div class="desc">免费编程学习平台，含数学、编程、计算机科学课程</div>
+      <div class="meta"><span class="stars">★ 438k</span> · TypeScript · React</div>
+    </a>
+    <a class="item" href="https://github.com/public-apis/public-apis" target="_blank">
+      <div class="name">public-apis/public-apis</div>
+      <div class="desc">免费 API 集合列表</div>
+      <div class="meta"><span class="stars">★ 405k</span> · Python</div>
+    </a>
+    <a class="item" href="https://github.com/EbookFoundation/free-programming-books" target="_blank">
+      <div class="name">EbookFoundation/free-programming-books</div>
+      <div class="desc">免费编程电子书资源</div>
+      <div class="meta"><span class="stars">★ 384k</span> · 教育</div>
+    </a>
+    <a class="item" href="https://github.com/kamranahmedse/developer-roadmap" target="_blank">
+      <div class="name">kamranahmedse/developer-roadmap</div>
+      <div class="desc">开发者成长路线图：前端、后端、DevOps 等</div>
+      <div class="meta"><span class="stars">★ 350k</span> · TypeScript</div>
+    </a>
+    <a class="item" href="https://github.com/donnemartin/system-design-primer" target="_blank">
+      <div class="name">donnemartin/system-design-primer</div>
+      <div class="desc">系统设计入门，含面试准备与 Anki 卡片</div>
+      <div class="meta"><span class="stars">★ 338k</span> · Python</div>
+    </a>
+    <a class="item" href="https://github.com/jwasham/coding-interview-university" target="_blank">
+      <div class="name">jwasham/coding-interview-university</div>
+      <div class="desc">软件工程师面试完整学习计划</div>
+      <div class="meta"><span class="stars">★ 338k</span> · 算法 · 数据结构</div>
+    </a>
+    <a class="item" href="https://github.com/vinta/awesome-python" target="_blank">
+      <div class="name">vinta/awesome-python</div>
+      <div class="desc">Python 框架、库、工具精选列表</div>
+      <div class="meta"><span class="stars">★ 286k</span> · Python</div>
+    </a>
+    <a class="item" href="https://github.com/openclaw/openclaw" target="_blank">
+      <div class="name">openclaw/openclaw</div>
+      <div class="desc">本地 AI 助手，支持多平台，可执行命令、读写文件、操控浏览器</div>
+      <div class="meta"><span class="stars">★ 279k</span> · TypeScript · AI Agent</div>
+    </a>
+  </div>
+</body>
+</html>

@@ -62,6 +62,12 @@ ContextInfo 是策略运行环境对象，是 init, after_init, handlebar 等基
 
 ---
 
+## 财务数据与价值因子
+
+- **get_financial_data(field_list, stock_list, report_type, start_time, end_time)**：获取财务数据与价值因子；字段须为「表名.字段名」（如 `CAPITALSTRUCTURE.total_capital`、`ASHAREINCOME.net_profit_incl_min_int_inc`）；`report_type='announce_time'` 按公告日期取数防未来函数，`'report_time'` 按报告期。详见 [qmt_complete_functions.md](../qmt_complete_functions.md#财务数据与价值因子) 与 [QMT 价值因子获取函数介绍](https://blog.csdn.net/easyquant_qmt/article/details/155524376)。
+
+---
+
 ## 交易函数
 
 ### passorder - 综合下单函数

@@ -16,6 +16,61 @@
 | **InStock** | 数据抓取、指标与 K 线形态、选股+回测 | https://github.com/coomia/InStock | — |
 | **Stock-picking-strategy** | 风险调整动量、多因子、风控与回测 | https://github.com/promise1121/Stock-picking-strategy | — |
 
+---
+
+## 多因子策略与因子库（价值/质量/成长/机器学习）
+
+以下为 GitHub 上与 **QMT 多因子**、**六大类因子**（价值、质量、成长、规模、动量、波动）、**Barra 风格因子**、**机器学习因子** 相关的开源项目，便于在 Cursor 中 @ 本文件后让 AI 参考因子定义、计算与策略思路；对接本仓库时需用 QMT 的 `get_market_data_ex` / `get_financial_data` 等接口改写数据与下单逻辑。
+
+### QMT 多因子 / 与 QMT 直接相关
+
+| 项目 | 说明 | GitHub |
+|------|------|--------|
+| **EzQmt** | 基于迅投 QMT 的自动化多因子策略：账户监控、多策略分仓、交易成本分析、行情爬虫 | https://github.com/LHanLi/EzQmt |
+| **QMT-CODE** | QMT 实盘策略示例（含止损等） | https://github.com/agilersu/QMT-CODE |
+| **QMT-QuantLimit** | 量化打板、限价相关策略 | https://github.com/123quant/QMT-QuantLimit |
+| **Rockyzsu/QMT** | QMT 自动化交易基础框架 | https://github.com/Rockyzsu/QMT |
+| **qmt_python** | 回测框架 Backtrader + 技术分析 + XtQuant 集成 | https://github.com/15259291016/qmt_python |
+
+### 六大因子 / 因子池（价值、质量、成长、规模、动量、波动）
+
+| 项目 | 说明 | GitHub |
+|------|------|--------|
+| **Stock-factor-pool** | 因子池：行情 8 个、财务 26 个（市值/质量/成长/资产负债）、技术 36 个，含含义与数学表达式 | https://github.com/shlguagua/Stock-factor-pool |
+| **PandaFactor** | 量化因子库：基础算子、技术指标、统计、时间序列，支持自动化计算与可视化 | https://github.com/PandaAI-Tech/panda_factor |
+| **multi-factor-model** | 多因子模型：择时、择股、因子分析 | https://github.com/wuboyuan/multi-factor-model |
+| **csf-factors** | 多因子分析框架：单因子 IC/收益分析、多因子组合、去极值/标准化、回测管道 | https://github.com/LUS8806/csf-factors |
+| **mfm_learner** | 多因子模型与量化投资沙盒，多种因子类型 | https://github.com/piginzoo/mfm_learner |
+
+### Barra 风格因子（价值 EP/BP、质量 ROE 等）
+
+| 项目 | 说明 | GitHub |
+|------|------|--------|
+| **Barra-CNE5** | Barra CNE5 多因子：BTOP、EARNYILD(EP/ETOP/CETOP)、质量/ROE 等风格因子，组合风险分析 | https://github.com/xinyue6688/Barra-CNE5 |
+| **multiFactor2_Barra** | 基于 Barra 的多因子模型（PHBS QTA） | https://github.com/jiangxunmu/multiFactor2_Barra |
+| **Multi-Factor-Model** | Barra 多因子模型，含 IC 分析 | https://github.com/ytfang222/Multi-Factor-Model |
+| **Barra**（mangoquant） | Barra 因子与收益计算、持仓分析、组合优化 | https://github.com/mangoquant/Barra |
+| **Barra-Risk-model** | Barra 风险模型、因子贡献度分析 | https://github.com/dmhy/Barra-Risk-model |
+
+### 机器学习因子 / 多因子选股（LightGBM、XGBoost 等）
+
+| 项目 | 说明 | GitHub |
+|------|------|--------|
+| **TechicalFactorLearning** | 技术因子 + 机器学习（LightGBM 等）A 股策略：因子生成、特征工程、训练、回测 | https://github.com/lzhttn/TechicalFactorLearning |
+| **TIDIBEI** | 多因子选股：RandomForest、GBDT、Adaboost、XGBoost、MLP、LSTM 等 | https://github.com/JoshuaQYH/TIDIBEI |
+| **XGboost_Index-Enhancement-Strategy** | 基于 XGBoost 的多因子指数增强策略（清华量化金融课程） | https://github.com/Neural-Finance/XGboost_Index-Enhancement-Strategy |
+| **multifactor_xgboost-mlp** | XGBoost + 神经网络多因子选股 | https://github.com/ZachyZhu/multifactor_xgboost-mlp |
+| **Guotai-Junan-191-Alpha** | 国泰君安 191 个短周期量价因子（WorldQuant 101 Alphas 思路），多因子选股 | https://github.com/SelenaMa9812/Guotai-Junan-191-Alpha |
+| **Multi-factor-Stock-Selection** | 多因子选股（自动选股、人工下单） | https://github.com/sunnyswag/Multi-factor-Stock-Selection |
+
+### 与本仓库的对接说明
+
+- **因子定义与数学形式**：可参考 **Stock-factor-pool**、**Barra-CNE5**、**因子参考表**（`docs/因子参考表.md`）与 **qmt_complete_functions.md** 中的财务/价值因子章节。
+- **数据来源**：上述非 QMT 项目多使用 Tushare/AKShare 等；在本仓库中需用 QMT 的 `get_financial_data`（价值/质量/成长等）、`get_market_data_ex`（行情/动量/波动等）替换并注意 `report_type='announce_time'` 防未来函数。
+- **机器学习因子**：特征工程与模型结构可借鉴 TIDIBEI、TechicalFactorLearning 等；实盘/回测执行需落在 QMT 的 init / handlebar 与 passorder 体系内。
+
+---
+
 ## 通用回测 / 策略框架
 
 | 项目 | 说明 | GitHub |
