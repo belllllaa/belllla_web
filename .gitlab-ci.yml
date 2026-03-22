@@ -10,7 +10,13 @@ pages:
   script:
     - ls -la
     - mkdir -p public
-    - cp github-top-stars.html public/index.html
+    - |
+      {
+        echo -n '<p style="color:#8b949e;font-size:13px;margin:0 0 1rem 0">GitLab Pages · pipeline '"$CI_PIPELINE_ID"' · '
+        date -u +%Y-%m-%dT%H:%M:%SZ | tr -d '\n'
+        echo ' (UTC)</p>'
+        cat github-top-stars.html
+      } > public/index.html
     - ls -la public/
   artifacts:
     paths:
