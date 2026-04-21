@@ -13,6 +13,15 @@
 |------|------|
 | strategy_sideways_breakout_official_style.py | 横盘突破（官方框架）：尾盘扫描、全推价、30 秒撤单重下 |
 | strategy_sideways_breakout_sz_ma240_live.py | 横盘异动突破 + 深证MA240：14:30–14:45 筛选，14:45 下单 |
+| strategy_sideways_breakout_sz_ma240_1m_live.py | 横盘异动 + 深证MA240（1 分钟周期）：**14:45–14:55** 每分钟筛选，有信号则打印代码+涨跌幅并下单；**满 7 只或 14:55** 停止买入；涨幅 **相对昨收**（见下）；无挤压/无总亏止损、仅 ATR 卖出 |
+| strategy_sideways_breakout_sz_ma240_1m_live_test_timer_pool.py | **测试用**：定时窗口、股票池/涨跌幅筛选日志，不下单；**SPOT_CHECK_CODES** 可对指定股票打印与实盘一致的横盘/涨幅诊断 |
+
+### strategy_sideways_breakout_sz_ma240_1m_live 买入涨幅口径
+
+- **昨收**：`closes[-2]`（日线）。  
+- **当前价**：优先 **全推 tick**，其次 **1m 收盘**，最后 **日线末根收**（与下单取价一致）。  
+- **当日涨幅**：`(当前价 - 昨收) / 昨收`；**当日最高涨幅**：`(当日最高 - 昨收) / 昨收`，用于配合 `today_high_return_max` 等参数。  
+- 与 **回测** `回测策略/strategy_sideways_breakout_sz_ma240.py` 中突破条件 **同一套定义**（回测用当日 K 线收盘价代替「当前价」）。
 
 ## 约定
 

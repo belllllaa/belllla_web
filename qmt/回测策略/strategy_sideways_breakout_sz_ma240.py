@@ -1,492 +1,856 @@
-#coding:gbk
+# coding: gbk
 """
-横盘异动突破策略（振幅+波动）+ 深证指数MA240过滤
-- 过去20交易日（不含今日）横盘区间震荡：
-  - 平均振幅有上下限：下限可设（如≥3%）避免死股，上限 ≤5%
-  - 价格波动区间 ≤ 15% （看最高和最低价）
-  - 今日涨幅>平均振幅*1.3, 今日涨幅 <8%
-- 价格大于3元 - 尾盘买入
-- 卖出逻辑：最少持有7个交易日后可触发止损；止损条件：7%总亏损止损 + 做多移动止损（持仓期间最高价 - ATR(14)×倍数，默认2.0）
-- 最多持有10只股票轮动，非ST股（剔除ST/创业板/科创板/北交所）
-- 持仓时间按【交易日】统计（用 barpos 差值）
-- 截面选股：在通过横盘+突破的候选中，按规模因子（市值最小）排序，取前 N 只买入（可关闭改用先到先得）
-- 买入前三天（不含当日）不能连跌三天（三日收盘价依次走低则过滤）
-- 【新增】深证指数（399001.SZ）跌破 MA240 时不开新仓
-- 【可选】挤压突破入场：布林带完全位于肯特纳通道内（squeeze）+ 连续3日挤压 + 突破前20日最高 + 放量1.5倍（init 中 use_squeeze_entry=True 开启）
-- 【可选】趋势因子过滤（init 中 trend_filter_mode）：周线类（交易周合成K线）与N日收益率动量。
+横盘异动突破 + 深证 MA240 过滤 + 破线防御选股（红利/低波/质量/行业）
 
-  方案说明（与实务/研报中常见表述对齐，便于换模式对比回测）：
-  1) weekly_ma_bull：周线（默认每5个交易日合成1根）收盘站上短均、短均站上长均——经典「均线多头」趋势定义。
-  2) weekly_ma_new：在 1) 基础上要求「本周满足、上周不满足」——近似「趋势刚转强/弱转强」确认。
-  3) weekly_3small_yang：近N周（默认3）均为小实体阳线——温和上攻而非暴动量拉升；实体/开盘比 ≤ trend_small_yang_max_body。
-  4) ret_nd：N日（默认20）区间收益率落在 [trend_ret_min, trend_ret_max]——中期动量转强但未过度陡峭（过热过滤）。
-  5) weekly_bull_and_ret：1) 与 4) 同时满足——趋势与动量双确认，信号更少。
-  6) weekly_new_or_small3：满足 2)，或同时满足 3) 与 4)——偏「启动或爬坡」的宽松组合。
-
-  说明：本策略未接 QMT 原生周线接口时，用「每 trend_week_len 根日线」合成周K，与日历周线略有差异，回测对比时勿与看盘软件周线逐点机械对齐。
-
-QMT 知识库可用指标（见 qmt_complete_functions.md）：
-- talib.SMA / EMA / RSI / MACD / BBANDS(close, 20, 2, 2)；talib.ATR(high, low, close, 14)；talib.TRANGE(high, low, close)
-- 肯特纳通道、滚动最高/量均线可用 numpy + talib 自行计算
+- 未破 MA240：横盘+突破截面选股；破 MA240：防御因子（见 _run_defensive_buy）
+- 卖出：可选总亏止损 + ATR 移动止损；持仓按 barpos 计交易日
+- 入口：init / handlebar；QMT 约定见 qmt_complete_functions.md
 """
+
+import time
+from itertools import chain
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
-import time
+
 try:
     import talib
 except Exception:
     talib = None
 
-# 深证成指代码，用于 MA240 过滤
-SZ_INDEX_CODE = '399001.SZ'
+# ---------------------------------------------------------------------------
+# 常量（指数、财务字段、策略备注名）
+# ---------------------------------------------------------------------------
+SZ_INDEX_CODE = "399001.SZ"
+
+# get_financial_data 字段（与迅投 data_function 表一致；勿随意改名）
+FINANCIAL_FIELDS: Tuple[str, ...] = (
+    "PERSHAREINDEX.equity_roe",
+    "PERSHAREINDEX.net_roe",
+    "PERSHAREINDEX.gear_ratio",
+    "PERSHAREINDEX.sales_gross_profit",
+    "PERSHAREINDEX.gross_profit",
+    "ASHARECASHFLOW.cash_pay_dist_dpcp_int_exp",
+    "CAPITALSTRUCTURE.total_capital",
+)
+
+STRATEGY_TAG_BREAKOUT = "横盘突破"
+STRATEGY_TAG_DEFENSIVE = "防御红利低波"
+
+DEFAULT_STOCK_POOL_INDICES: Tuple[str, ...] = ("399007.SZ", "000903.SH")
 
 
-def init(C):
-    C.accountid = getattr(C, 'accountid', '')
+# ---------------------------------------------------------------------------
+# init
+# ---------------------------------------------------------------------------
+def init(C) -> None:
+    """初始化 ContextInfo：参数全部挂在 C 上，便于回测前在界面或代码中覆盖。"""
+    C.accountid = getattr(C, "accountid", "")
     C.holding = {}
     C.buy_price = {}
     C.buy_shares = {}
     C.buy_date = {}
-    C.buy_barpos = {}   # 买入时的 K 线索引，用于按【交易日】计算持仓天数
+    C.buy_barpos = {}
 
-    # ---------- 回测可调参数（改这里即可）----------
+    # --- 仓位与资金 ---
     C.max_stocks = 7
-    C.per_stock_amount = 140000
+    C.per_stock_amount = 140_000
     C.min_hold_days = 7
-    C.sort_by_factor = getattr(C, 'sort_by_factor', 'market_cap')  # 'market_cap'=按市值最小取前N只，''=先到先得
+    C.sort_by_factor = getattr(C, "sort_by_factor", "market_cap")
 
-    # 横盘条件
-    C.amp_min = getattr(C, 'amp_min', 0.03)   # 平均振幅下限（0=不设）
-    C.amp_max = 0.05                           # 平均振幅上限
-    C.price_range_max = 1.15                   # 价格波动区间上限（最高/最低比）
-    C.sideways_days = 20                       # 横盘统计天数（不含当日）
-    C.min_closes_for_buy = 22                  # 买入所需最少K线根数
+    # --- 横盘 ---
+    C.amp_min = getattr(C, "amp_min", 0.03)
+    C.amp_max = 0.06
+    C.price_range_max = 1.15
+    C.sideways_days = 20
+    C.min_closes_for_buy = 22
 
-    # 突破条件
-    C.breakout_amp_mult = 1.3                  # 今日涨幅 > 平均振幅 * 该倍数
-    C.today_return_max = 0.08                  # 今日涨幅上限（如8%）
-    C.today_high_return_max = getattr(C, 'today_high_return_max', 0.095)  # 当日最高涨幅上限，≥则过滤（避免上午已拉涨停的票，默认9.5%）
+    # --- 突破 ---
+    C.breakout_amp_mult = 1.3
+    C.today_return_max = 0.08
+    C.today_high_return_max = getattr(C, "today_high_return_max", 0.095)
 
-    # 价格与数量
-    C.min_price = 3.0                          # 最低价格过滤（元）
-    C.min_shares = 100                         # 每笔最小股数（手）；股数由 per_stock_amount/现价 决定，不设单笔股数上限
+    # --- 价格 / 停牌 ---
+    C.min_price = 3.0
+    C.min_shares = 100
+    C.skip_suspended = getattr(C, "skip_suspended", True)
+    C.min_day_volume = getattr(C, "min_day_volume", 1)
 
-    # 卖出
-    C.use_stop_loss_total = getattr(C, 'use_stop_loss_total', False)  # 是否启用总亏损止损
-    C.stop_loss_total = 0.07                   # 总亏损止损比例
-    # 做多移动止损：止损位 = 持仓期间最高价 - ATR(14)×倍数（防守型建议 2.0）
+    # --- 卖出 ---
+    C.use_stop_loss_total = getattr(C, "use_stop_loss_total", False)
+    C.stop_loss_total = 0.07
     C.atr_period = 14
     C.atr_stop_mult = 2.0
 
-    # 可选：挤压突破入场（布林在肯特纳内 + 连续3日挤压 + 突破20日高 + 放量1.5倍）
-    C.use_squeeze_entry = getattr(C, 'use_squeeze_entry', False)
+    C.use_squeeze_entry = getattr(C, "use_squeeze_entry", False)
 
-    # 深证MA240过滤
-    C.sz_ma240_count = 250                     # 深证指数取数根数（需>=240）
-    C.sz_ma240_period = 240                   # MA240 周期
+    # --- 深证 MA240 ---
+    C.sz_ma240_count = 250
+    C.sz_ma240_period = 240
+    C.bar_count = getattr(C, "bar_count", 25)
 
-    # ---------- 趋势因子过滤（买入前额外条件；'' 表示关闭）----------
-    # 模式一览：
-    #   ''                  不启用
-    #   'weekly_ma_bull'    周线（每5个交易日一节）收盘 > MA短 > MA长
-    #   'weekly_ma_new'     本周刚形成上述多头排列（上周非多头）
-    #   'weekly_3small_yang' 近3个交易周均为小阳线（阳线且实体/开盘≤阈值）
-    #   'ret_nd'            N日收益率在 [trend_ret_min, trend_ret_max]（过滤过冷/过热）
-    #   'weekly_bull_and_ret'  weekly_ma_bull 且 ret_nd
-    #   'weekly_new_or_small3' weekly_ma_new 或 (3小阳线 且 ret_nd)
-    C.trend_filter_mode = getattr(C, 'trend_filter_mode', '')
-    C.trend_week_len = getattr(C, 'trend_week_len', 5)           # 合成「交易周」天数（A股常用近似）
-    C.trend_week_ma_short = getattr(C, 'trend_week_ma_short', 5) # 短均线周期（周）
-    C.trend_week_ma_long = getattr(C, 'trend_week_ma_long', 10)  # 长均线周期（周）
-    C.trend_small_yang_weeks = getattr(C, 'trend_small_yang_weeks', 3)
-    C.trend_small_yang_max_body = getattr(C, 'trend_small_yang_max_body', 0.03)  # 小阳线：实体/开盘 ≤ 3%
-    C.trend_ret_days = getattr(C, 'trend_ret_days', 20)          # 动量窗口（交易日）
-    C.trend_ret_min = getattr(C, 'trend_ret_min', 0.0)           # N日收益下限，如 0 表示中期非负
-    C.trend_ret_max = getattr(C, 'trend_ret_max', 0.18)          # N日收益上限，抑制过热
+    # --- 破 MA240：防御选股 ---
+    C.enable_defensive_ma240 = getattr(C, "enable_defensive_ma240", True)
+    C.defensive_vol_window = getattr(C, "defensive_vol_window", 60)
+    C.defensive_bar_count = getattr(C, "defensive_bar_count", 75)
+    C.defensive_max_ann_vol = getattr(C, "defensive_max_ann_vol", 0.50)
+    C.defensive_min_equity_roe = getattr(C, "defensive_min_equity_roe", 0.05)
+    C.defensive_max_gear_ratio = getattr(C, "defensive_max_gear_ratio", 0.75)
+    C.defensive_min_sales_gross = getattr(C, "defensive_min_sales_gross", 0.05)
+    # 股息率下限：0=不强制红利（现金流为 0 或 mcap 估算偏差时易全灭）
+    C.defensive_min_div_yield = getattr(C, "defensive_min_div_yield", 0.0)
+    C.defensive_div_annualize = getattr(C, "defensive_div_annualize", False)
+    # 财报字段缺失时是否跳过该条筛选（否则 gear/gross 为 None 会整票淘汰）
+    C.defensive_skip_gear_if_missing = getattr(C, "defensive_skip_gear_if_missing", True)
+    C.defensive_skip_gross_if_missing = getattr(C, "defensive_skip_gross_if_missing", True)
+    C.defensive_max_scan = getattr(C, "defensive_max_scan", 500)
+    C.defensive_fin_batch = getattr(C, "defensive_fin_batch", 40)
+    C.defensive_require_sector = getattr(C, "defensive_require_sector", False)
+    C.defensive_sector_names = getattr(
+        C,
+        "defensive_sector_names",
+        [
+            "银行", "电力", "电力设备", "公用事业", "交通运输", "公路铁路运输", "港口航运",
+            "煤炭开采", "石油石化", "食品加工制造", "饮料制造", "医药生物", "中药", "化学制药",
+            "电信服务", "通信设备", "水务", "燃气", "机场", "高速公路",
+        ],
+    )
+    C._defensive_sector_cache_date = None
+    C._defensive_sector_cache_set = None
 
-    # 其他：K 线根数（开启趋势过滤时需更长日线以供合成周线 + N 日收益）
-    if C.trend_filter_mode:
-        C.bar_count = max(getattr(C, 'bar_count', 80), C.sideways_days + 60)
-        _need = max(55, C.trend_week_ma_long * C.trend_week_len + 2 * C.trend_week_len + C.trend_ret_days + 5)
-        if C.min_closes_for_buy < _need:
-            C.min_closes_for_buy = _need
-    else:
-        C.bar_count = getattr(C, 'bar_count', 25)
-    # ---------- 以上参数可在回测前在 init 内修改 ----------
-
-    print('横盘突破策略（简化版-优化版）+ 深证MA240过滤 初始化完成')
+    print("横盘突破策略（简化版-优化版）+ 深证MA240过滤 初始化完成")
+    print(f"  日线取数 bar_count={C.bar_count}  最少K线 min_closes_for_buy={C.min_closes_for_buy}")
+    print(f"  破MA240防御买入 enable_defensive_ma240={getattr(C, 'enable_defensive_ma240', True)}（需财务数据+板块名与客户端一致）")
 
 
-def _check_stop_loss_total(C, current_price, buy_price):
-    """
-    总亏损止损：当前价相对成本价亏损超过 C.stop_loss_total（如7%）时触发。
-    仅当 C.use_stop_loss_total 为 True 时生效。
-    返回 (是否触发, 原因文案)。
-    """
-    if not getattr(C, 'use_stop_loss_total', True):
+# ---------------------------------------------------------------------------
+# 持仓与下单（减少 handlebar 重复）
+# ---------------------------------------------------------------------------
+def _active_holdings_count(C) -> int:
+    return sum(1 for h in C.holding.values() if h)
+
+
+def _execute_buy(
+    C,
+    *,
+    stock: str,
+    price: float,
+    bar_date_str: str,
+    current_date_str: str,
+    strategy_tag: str,
+    log_suffix: str = "",
+) -> bool:
+    """按金额与最小手数买入；成功返回 True。"""
+    target_shares = int(C.per_stock_amount / price)
+    shares = (target_shares // C.min_shares) * C.min_shares
+    if shares < C.min_shares:
+        return False
+    passorder(23, 1101, C.accountid, stock, 5, 0, shares, strategy_tag, 1, "", C)
+    C.holding[stock] = True
+    C.buy_price[stock] = price
+    C.buy_shares[stock] = shares
+    C.buy_date[stock] = current_date_str
+    C.buy_barpos[stock] = C.barpos
+    extra = f" {log_suffix}" if log_suffix else ""
+    print(f"{bar_date_str} 买入 {stock} {shares}股 @ {price:.3f} {strategy_tag}{extra}")
+    C.draw_text(1, 1, "买")
+    return True
+
+
+def _clear_holding_metadata(C, stock: str) -> None:
+    for d in (C.buy_price, C.buy_shares, C.buy_date, C.buy_barpos):
+        d.pop(stock, None)
+
+
+# ---------------------------------------------------------------------------
+# 风险与指数
+# ---------------------------------------------------------------------------
+def _check_stop_loss_total(C, current_price: float, buy_price: float) -> Tuple[bool, str]:
+    if not getattr(C, "use_stop_loss_total", True):
         return False, ""
     if buy_price is None or buy_price <= 0:
         return False, ""
-    pct = getattr(C, 'stop_loss_total', 0.07)
+    pct = getattr(C, "stop_loss_total", 0.07)
     total_loss = (current_price - buy_price) / buy_price
     if total_loss < -pct:
-        return True, f"总亏损{pct:.0%}止损"
+        return True, "总亏损{:.0%}止损".format(pct)
     return False, ""
 
 
-def _is_sz_below_ma240(C, bar_date_str):
-    """
-    判断深证指数（399001.SZ）是否跌破 MA240。
-    若跌破则不开新仓。获取失败或数据不足时保守处理：允许开仓（避免因行情缺失误拦）。
-    """
+def _is_sz_below_ma240(C, bar_date_str: str) -> bool:
+    """深证成指是否收于 MA240 下方；数据不足时返回 False（不拦截）。"""
     try:
-        count = getattr(C, 'sz_ma240_count', 250)
-        period_len = getattr(C, 'sz_ma240_period', 240)
+        count = getattr(C, "sz_ma240_count", 250)
+        period_len = getattr(C, "sz_ma240_period", 240)
         data = C.get_market_data_ex(
-            ['close'], [SZ_INDEX_CODE],
-            end_time=bar_date_str, period='1d', count=count, subscribe=False
+            ["close"], [SZ_INDEX_CODE],
+            end_time=bar_date_str, period="1d", count=count, subscribe=False,
         )
-        if SZ_INDEX_CODE not in data or len(data[SZ_INDEX_CODE]['close']) < period_len:
-            return False  # 数据不足时不拦截
-        closes = list(data[SZ_INDEX_CODE]['close'])
+        if SZ_INDEX_CODE not in data or len(data[SZ_INDEX_CODE]["close"]) < period_len:
+            return False
+        closes = list(data[SZ_INDEX_CODE]["close"])
         ma240 = np.mean(closes[-period_len:])
-        current_close = closes[-1]
-        return float(current_close) < float(ma240)
+        return float(closes[-1]) < float(ma240)
     except Exception as e:
         print(f"深证MA240检查异常: {e}")
         return False
 
 
-def _trading_weekly_ohlc(closes, opens, highs, lows, n_weeks, week_len):
-    """
-    从日线末尾向前合成 n_weeks 根「交易周」K（每 week_len 根日线为一周），
-    返回 (open, high, low, close)，每根数组按时间从旧到新（最后一根为最近一周）。
-    不足数据时返回 None。
-    """
-    if n_weeks <= 0 or week_len <= 0:
-        return None
-    if min(len(closes), len(opens), len(highs), len(lows)) < n_weeks * week_len:
-        return None
-    wo, wh, w_low, wc = [], [], [], []
-    end = len(closes)
-    for _ in range(n_weeks):
-        start = end - week_len
-        if start < 0:
-            return None
-        seg = slice(start, end)
-        wo.append(float(opens[start]))
-        wc.append(float(closes[end - 1]))
-        wh.append(max(highs[seg]))
-        w_low.append(min(lows[seg]))
-        end = start
-    wo.reverse()
-    wh.reverse()
-    w_low.reverse()
-    wc.reverse()
-    return wo, wh, w_low, wc
+def _sz_index_status_message(sz_below: bool, enable_defensive: bool) -> str:
+    if not sz_below:
+        return "未破MA240：可横盘突破"
+    base = "破MA240：暂停横盘突破"
+    return base + ("，启用防御选股" if enable_defensive else "，防御买入已关(不开新仓)")
 
 
-def _weekly_ma_bull_series(week_closes, short_p, long_p):
-    """
-    对周线收盘序列逐根判断：收盘 > SMA(短) > SMA(长)。
-    返回与 week_closes 等长的 bool 列表；数据不足或 talib 不可用时返回 None。
-    """
-    if talib is None or len(week_closes) < long_p + 1:
-        return None
-    arr = np.array(week_closes, dtype=np.float64)
-    sma_s = talib.SMA(arr, short_p)
-    sma_l = talib.SMA(arr, long_p)
-    out = []
-    for i in range(len(week_closes)):
-        if np.isnan(sma_s[i]) or np.isnan(sma_l[i]):
-            out.append(False)
-            continue
-        out.append(week_closes[i] > sma_s[i] > sma_l[i])
-    return out
-
-
-def _last_n_weeks_small_yang(weekly_opens, weekly_closes, n_weeks, max_body_pct):
-    """最近 n_weeks 根周K（含最近一周）：均为阳线且实体/开盘 <= max_body_pct。"""
-    if n_weeks <= 0 or len(weekly_closes) < n_weeks or len(weekly_opens) < n_weeks:
-        return False
-    for i in range(-n_weeks, 0):
-        o, c = weekly_opens[i], weekly_closes[i]
-        if o <= 0 or c <= o:
-            return False
-        if (c - o) / o > max_body_pct:
-            return False
-    return True
-
-
-def _nday_return_in_range(closes, n_days, r_min, r_max):
-    """N 日收益率 (今收/前第N日收 - 1) 落在 [r_min, r_max]。"""
-    if n_days <= 0 or len(closes) < n_days + 1:
-        return False
-    base = closes[-1 - n_days]
-    if base is None or base <= 0:
-        return False
-    r = closes[-1] / base - 1.0
-    return r_min <= r <= r_max
-
-
-def _pass_trend_filter(C, closes, highs, lows, opens):
-    """
-    买入侧趋势因子过滤。定义参考常见量价与动量因子：
-    - 周线多头排列：价格位于短均线上方、短均线位于长均线上方（经典趋势跟踪表述）；
-    - 「刚多头」：本周满足多头、上周不满足，类似短周期均线上穿后的确认；
-    - 小连阳：连续数周阳线且实体不大，偏「温和爬坡」而非急拉；
-    - N 日收益：中期动量在合理区间（避免跌势接力也避免过度偏离）。
-    """
-    mode = (getattr(C, 'trend_filter_mode', '') or '').strip().lower()
-    if not mode:
+# ---------------------------------------------------------------------------
+# 停牌 / 波动
+# ---------------------------------------------------------------------------
+def _is_suspended_last_day(
+    volumes, highs, lows, closes, opens, min_vol: float,
+) -> bool:
+    if not closes:
+        return True
+    i = -1
+    if volumes is not None and len(volumes) > 0:
+        idx = i if len(volumes) >= len(closes) else -1
+        try:
+            return float(volumes[idx]) < float(min_vol)
+        except Exception:
+            pass
+    try:
+        h, l, o, c = float(highs[i]), float(lows[i]), float(opens[i]), float(closes[i])
+        return h == l == o == c
+    except Exception:
         return True
 
-    wl = int(getattr(C, 'trend_week_len', 5))
-    ms = int(getattr(C, 'trend_week_ma_short', 5))
-    ml = int(getattr(C, 'trend_week_ma_long', 10))
-    n_small = int(getattr(C, 'trend_small_yang_weeks', 3))
-    small_body = float(getattr(C, 'trend_small_yang_max_body', 0.03))
-    nd = int(getattr(C, 'trend_ret_days', 20))
-    rmin = float(getattr(C, 'trend_ret_min', 0.0))
-    rmax = float(getattr(C, 'trend_ret_max', 0.18))
 
-    n_weeks_need = max(ml + 3, ms + 3, 12)
-    pack = _trading_weekly_ohlc(closes, opens, highs, lows, n_weeks_need, wl)
-    if pack is None:
-        return False
-    wo, wh, w_low, wc = pack
-
-    bulls = _weekly_ma_bull_series(wc, ms, ml)
-    bull_now = bulls[-1] if bulls else False
-    bull_prev = bulls[-2] if bulls and len(bulls) >= 2 else False
-
-    small_ok = _last_n_weeks_small_yang(wo, wc, n_small, small_body)
-    ret_ok = _nday_return_in_range(closes, nd, rmin, rmax)
-
-    if mode in ('weekly_ma_bull', 'ma_bull', 'w_ma_bull'):
-        return bool(bull_now)
-
-    if mode in ('weekly_ma_new', 'weekly_ma_bull_new', 'ma_new', 'w_ma_new'):
-        if bulls is None:
-            return False
-        return bool(bull_now and not bull_prev)
-
-    if mode in ('weekly_3small_yang', 'weekly_3_small_yang', 'small_yang'):
-        return bool(small_ok)
-
-    if mode in ('ret_nd', 'nd_ret', 'mom_nd'):
-        return bool(ret_ok)
-
-    if mode in ('weekly_bull_and_ret', 'bull_ret', 'w_bull_ret'):
-        if bulls is None:
-            return False
-        return bool(bull_now and ret_ok)
-
-    if mode in ('weekly_new_or_small3', 'new_or_small', 'w_new_or_sy'):
-        if bulls is None:
-            new_ok = False
-        else:
-            new_ok = bool(bull_now and not bull_prev)
-        return bool(new_ok or (small_ok and ret_ok))
-
-    # 未知模式不拦（便于扩展）；若希望严格可改为 return False
-    print(f"[趋势过滤] 未知 trend_filter_mode={mode!r}，已跳过")
-    return True
+def _annualized_vol_from_closes(closes: Sequence[float], window: int) -> Optional[float]:
+    if closes is None or len(closes) < window + 1:
+        return None
+    arr = np.array(closes[-(window + 1):], dtype=np.float64)
+    if np.any(arr <= 0):
+        return None
+    rets = np.diff(arr) / arr[:-1]
+    if len(rets) < 2:
+        return None
+    return float(np.std(rets, ddof=1)) * np.sqrt(252.0)
 
 
-def handlebar(C):
-    bar_date_str = timetag_to_datetime(C.get_bar_timetag(C.barpos), '%Y%m%d%H%M%S')
-    current_date_str = bar_date_str[:8]
+# ---------------------------------------------------------------------------
+# 财务工具
+# ---------------------------------------------------------------------------
+def _get_financial_data_fn(C):
+    fn = getattr(C, "get_financial_data", None)
+    if callable(fn):
+        return fn
+    g = globals()
+    gfd = g.get("get_financial_data")
+    return gfd if callable(gfd) else None
 
-    # 获取股票池 - （组合指数成分股），这是最可靠的方法
-    all_stocks = get_stock_pool(C, bar_date_str)
 
-    print(f"[{bar_date_str}] 股票池大小: {len(all_stocks)} 只股票")
+def _financial_start_time(end_date_yyyy_mm_dd: str) -> str:
+    y = int(end_date_yyyy_mm_dd[:4])
+    return f"{y - 5}0101"
 
-    # 卖出逻辑
-    for stock in list(C.holding.keys()):
-        if not C.holding.get(stock, False):
+
+def _norm_pct_value(x) -> Optional[float]:
+    if x is None:
+        return None
+    try:
+        v = float(x)
+        if np.isnan(v):
+            return None
+        return v / 100.0 if abs(v) > 1.5 else v
+    except Exception:
+        return None
+
+
+def _norm_ratio_0_1(x) -> Optional[float]:
+    if x is None:
+        return None
+    try:
+        v = float(x)
+        if np.isnan(v):
+            return None
+        return v / 100.0 if v > 1.0 + 1e-6 else v
+    except Exception:
+        return None
+
+
+def _is_tabular_df(obj: Any) -> bool:
+    """是否为类 DataFrame（不 import pandas，兼容 QMT 返回的表对象）。"""
+    return hasattr(obj, "iloc") and hasattr(obj, "columns") and hasattr(obj, "__len__")
+
+
+def _is_tabular_series(obj: Any) -> bool:
+    """是否为类 Series（有 index、iloc，无 columns）。"""
+    return hasattr(obj, "iloc") and hasattr(obj, "index") and not hasattr(obj, "columns")
+
+
+def _slice_financial_table_for_stock(df: Any, stock: str) -> Any:
+    """
+    批量财务表可能为多行多标的：按代码/多级索引切到当前 stock 再取数。
+    """
+    if not _is_tabular_df(df) or len(df) < 1:
+        return df
+    prefix = stock.split(".")[0]
+    try:
+        idx = df.index
+        if hasattr(idx, "names") and idx.names and len(idx.names) > 1:
+            for level in range(len(idx.names)):
+                lev = idx.get_level_values(level)
+                as_set = {str(x) for x in lev}
+                if stock in as_set or f"{prefix}.SH" in as_set or f"{prefix}.SZ" in as_set:
+                    try:
+                        sub = df.xs(stock, level=level, drop_level=False)
+                        if _is_tabular_df(sub) and len(sub) >= 1:
+                            return sub
+                    except Exception:
+                        pass
+                    try:
+                        for key in (stock, prefix):
+                            if key in lev:
+                                sub = df.xs(key, level=level, drop_level=False)
+                                if _is_tabular_df(sub) and len(sub) >= 1:
+                                    return sub
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+    for col in ("thscode", "stock_code", "证券代码", "股票代码", "code"):
+        if col not in getattr(df, "columns", []):
             continue
+        try:
+            ser = df[col].astype(str)
+            if hasattr(ser, "str"):
+                mask = ser.str.contains(prefix, na=False)
+            else:
+                mask = [prefix in str(x) for x in ser]
+            sub = df[mask]
+            if _is_tabular_df(sub) and len(sub) >= 1:
+                return sub
+        except Exception:
+            continue
+    return df
+
+
+def _filter_df_by_code_column(df: Any, col: str, code_prefix: str) -> Any:
+    """按代码列包含 code_prefix 筛选；优先用 pandas 风格 .str.contains。"""
+    if not _is_tabular_df(df) or col not in df.columns:
+        return None
+    col_data = df[col]
+    try:
+        if hasattr(col_data, "str"):
+            mask_series = col_data.astype(str).str.contains(code_prefix, na=False)
+            return df[mask_series]
+        mask = [code_prefix in str(df.iloc[i][col]) for i in range(len(df))]
+        return df.loc[mask] if hasattr(df, "loc") else None
+    except Exception:
+        return None
+
+
+def _parse_financial_to_metrics(raw: Any, stock: str) -> Optional[Dict[str, Any]]:
+    """
+    解析 get_financial_data 返回值。
+    不依赖 import pandas：对 QMT 返回的 DataFrame/Series 用鸭子类型访问；
+    若环境无 pandas 且接口返回 dict，则走 dict 分支即可。
+    """
+    keys = {
+        "equity_roe": "PERSHAREINDEX.equity_roe",
+        "net_roe": "PERSHAREINDEX.net_roe",
+        "gear_ratio": "PERSHAREINDEX.gear_ratio",
+        "sales_gross_profit": "PERSHAREINDEX.sales_gross_profit",
+        "gross_profit": "PERSHAREINDEX.gross_profit",
+        "cash_dist": "ASHARECASHFLOW.cash_pay_dist_dpcp_int_exp",
+        "total_capital": "CAPITALSTRUCTURE.total_capital",
+    }
+    try:
+        df = None
+        if isinstance(raw, dict):
+            df = raw.get(stock)
+            if df is None:
+                for k, v in raw.items():
+                    if k == stock or (isinstance(k, str) and stock in k):
+                        df = v
+                        break
+        elif _is_tabular_df(raw):
+            df = raw
+
+        if df is None or not _is_tabular_df(df) or len(df) < 1:
+            return None
+
+        df = _slice_financial_table_for_stock(df, stock)
+
+        prefix = stock.split(".")[0]
+        cols = getattr(df, "columns", None)
+        for col in ("stock_code", "code", "证券代码", "股票代码"):
+            if cols is None or col not in cols:
+                continue
+            sub = _filter_df_by_code_column(df, col, prefix)
+            if sub is not None and len(sub) >= 1:
+                df = sub
+            break
 
         try:
-            buy_bar = C.buy_barpos.get(stock, C.barpos)
-            # 持仓天数 = 当前 bar 索引 - 买入时 bar 索引（按【交易日】计算）
-            days_held = max(0, C.barpos - buy_bar)
-            in_min_hold = days_held < C.min_hold_days
+            idx = getattr(df, "index", None)
+            if idx is not None and hasattr(idx, "get_level_values"):
+                level0 = idx.get_level_values(0)
+                if stock in set(level0):
+                    df = df.loc[stock]
+        except Exception:
+            pass
 
-            # 需足够 K 线计算 ATR(14) 与持仓期间最高价
-            bar_count = max(getattr(C, 'bar_count', 25), days_held + 10, getattr(C, 'atr_period', 14) + 5)
-            data = C.get_market_data_ex(['close', 'high', 'low', 'open'], [stock], end_time=bar_date_str, period=getattr(C, 'period', '1d'), count=bar_count, subscribe=False)
-            if stock not in data or len(data[stock].get('close', [])) < 2:
-                continue
+        if _is_tabular_series(df):
+            row = df
+        else:
+            row = df.iloc[-1]
 
-            closes = list(data[stock]['close'])
-            opens = list(data[stock]['open'])
-            highs = list(data[stock]['high'])
-            lows = list(data[stock]['low'])
-            current_price = closes[-1]
-            buy_price = C.buy_price.get(stock, current_price)
-            today_open = opens[-1]
-            today_high = highs[-1]
-            today_low = lows[-1]
+        def pick(col_name: str):
+            if col_name in row.index:
+                return row[col_name]
+            for idx in row.index:
+                if str(idx).endswith(col_name.split(".")[-1]):
+                    return row[idx]
+            return None
 
-            if today_open <= 0:
-                continue
+        return {short: pick(full) for short, full in keys.items()}
+    except Exception:
+        return None
 
-            sell_condition = False
-            sell_reason = ""
 
-            stop_triggered, stop_reason = _check_stop_loss_total(C, current_price, buy_price)
-            if stop_triggered:
-                sell_condition = True
-                sell_reason = stop_reason
-            elif not in_min_hold and talib is not None and days_held >= 1:
-                # 做多移动止损：止损位 = 持仓期间最高价 - ATR(14)×倍数
-                n_since_entry = min(days_held + 1, len(highs))
-                highest_high_since_entry = max(highs[-n_since_entry:])
-                try:
-                    high_arr = np.array(highs, dtype=np.float64)
-                    low_arr = np.array(lows, dtype=np.float64)
-                    close_arr = np.array(closes, dtype=np.float64)
-                    atr_arr = talib.ATR(high_arr, low_arr, close_arr, getattr(C, 'atr_period', 14))
-                    atr_14 = float(atr_arr[-1]) if len(atr_arr) and not np.isnan(atr_arr[-1]) else None
-                except Exception:
-                    atr_14 = None
-                if atr_14 is not None and atr_14 > 0:
-                    mult = getattr(C, 'atr_stop_mult', 2.0)
-                    stop_loss = highest_high_since_entry - atr_14 * mult
-                    if current_price <= stop_loss:
-                        sell_condition = True
-                        sell_reason = f"ATR移动止损(最高{highest_high_since_entry:.3f}-ATR*{mult:.1f}={stop_loss:.3f})"
+def _defensive_gross_margin(m: Optional[Dict]) -> Optional[float]:
+    if not m:
+        return None
+    g = _norm_pct_value(m.get("sales_gross_profit"))
+    return g if g is not None else _norm_pct_value(m.get("gross_profit"))
 
-            if sell_condition and stock in C.buy_shares:
-                shares = C.buy_shares[stock]
-                if shares >= C.min_shares:
-                    passorder(24, 1101, C.accountid, stock, 5, 0, shares, "横盘突破", 1, "", C)
-                    C.holding[stock] = False
-                    profit = (current_price - buy_price) * shares
-                    profit_pct = (current_price - buy_price) / buy_price
-                    print(f"{bar_date_str} 卖出 {stock} {shares}股 @ {current_price:.3f} {sell_reason} 盈亏: {profit:.2f} ({profit_pct:.1%})")
 
-                    for key in [C.buy_price, C.buy_shares, C.buy_date, C.buy_barpos]:
-                        if stock in key:
-                            del key[stock]
-                    C.draw_text(1, 1, '卖')
+def _defensive_roe(m: Optional[Dict]) -> Optional[float]:
+    if not m:
+        return None
+    r = _norm_pct_value(m.get("equity_roe"))
+    return r if r is not None else _norm_pct_value(m.get("net_roe"))
 
-        except Exception as e:
-            print(f"卖出异常 {stock}: {e}")
 
-    # 买入逻辑：先检查深证指数是否跌破 MA240，跌破则不开新仓
-    sz_below_ma240 = _is_sz_below_ma240(C, bar_date_str)
-    print(f"[{bar_date_str}] 深证指数: {'破MA240，不开新仓' if sz_below_ma240 else '未破MA240'}")
-    current_holdings = sum(1 for h in C.holding.values() if h)
+def _fetch_financial_metrics(C, stock: str, end_date: str) -> Optional[Dict[str, Any]]:
+    fn = _get_financial_data_fn(C)
+    if not fn:
+        return None
+    start = _financial_start_time(end_date)
+    try:
+        raw = fn(list(FINANCIAL_FIELDS), [stock], "announce_time", start_time=start, end_time=end_date)
+    except Exception:
+        return None
+    return _parse_financial_to_metrics(raw, stock)
 
-    if current_holdings < C.max_stocks and not sz_below_ma240:
-        total_stocks = len(all_stocks)  # 全扫描，无上限
-        passed_sector_filter = 0
-        passed_data_filter = 0
-        passed_price_filter = 0
-        passed_sideways_filter = 0
-        passed_trend_filter = 0
-        passed_breakout_filter = 0
-        candidates = []   # (stock, current_close, sort_value) 用于截面排序
 
-        for stock in all_stocks:
-            if C.holding.get(stock, False):
-                continue
-            if _is_chinext_star_bse_or_st(stock):
-                continue
-            passed_sector_filter += 1
+def _fetch_financial_metrics_batch(C, stocks: List[str], end_date: str) -> Dict[str, Dict]:
+    fn = _get_financial_data_fn(C)
+    if not fn or not stocks:
+        return {}
+    start = _financial_start_time(end_date)
+    try:
+        raw = fn(list(FINANCIAL_FIELDS), list(stocks), "announce_time", start_time=start, end_time=end_date)
+    except Exception:
+        raw = None
+    def _resolve_m(stock: str):
+        m = _parse_financial_to_metrics(raw, stock) if raw is not None else None
+        if not m or all(v is None for v in m.values()):
+            m = _fetch_financial_metrics(C, stock, end_date)
+        return stock, m
 
+    return {
+        s: m
+        for s, m in (_resolve_m(s) for s in stocks)
+        if m and any(v is not None for v in m.values())
+    }
+
+
+def _defensive_composite_score(dy: Optional[float], roe: Optional[float], vol: Optional[float]) -> float:
+    dy = dy or 0.0
+    roe = roe or 0.0
+    vol = vol if vol is not None else 1.0
+    return dy * 3.0 + roe * 2.0 - vol * 0.5
+
+
+def _defensive_pass_filters(
+    C, m: Dict, current_close: float, ann_vol: float,
+) -> Optional[float]:
+    """通过则返回综合分，否则 None。"""
+    roe = _defensive_roe(m)
+    gear = _norm_ratio_0_1(m.get("gear_ratio"))
+    gross = _defensive_gross_margin(m)
+    tc_raw, cashd_raw = m.get("total_capital"), m.get("cash_dist")
+    try:
+        tc = float(tc_raw) if tc_raw is not None else None
+        cashd = float(cashd_raw) if cashd_raw is not None else None
+    except Exception:
+        tc, cashd = None, None
+
+    mcap = tc * current_close if (tc and tc > 0 and current_close > 0) else None
+    dy = None
+    if mcap and mcap > 0 and cashd is not None and cashd >= 0:
+        dy = cashd / mcap
+        if getattr(C, "defensive_div_annualize", False):
+            dy *= 4.0
+
+    min_roe = float(getattr(C, "defensive_min_equity_roe", 0.05))
+    if roe is None or roe < min_roe:
+        return None
+
+    max_gear = float(getattr(C, "defensive_max_gear_ratio", 0.75))
+    skip_gear = getattr(C, "defensive_skip_gear_if_missing", True)
+    if gear is not None:
+        if gear > max_gear:
+            return None
+    elif not skip_gear:
+        return None
+
+    min_g = float(getattr(C, "defensive_min_sales_gross", 0.05))
+    skip_gross = getattr(C, "defensive_skip_gross_if_missing", True)
+    if gross is not None:
+        if gross < min_g:
+            return None
+    elif not skip_gross:
+        return None
+
+    min_dy = float(getattr(C, "defensive_min_div_yield", 0.0))
+    if min_dy > 0 and (dy is None or dy < min_dy):
+        return None
+    return _defensive_composite_score(dy, roe, ann_vol)
+
+
+def _sector_constituents_safe(C, sector_name: str) -> List[str]:
+    try:
+        if hasattr(C, "get_stock_list_in_sector"):
+            lst = C.get_stock_list_in_sector(sector_name)
+            return list(lst) if lst else []
+    except Exception:
+        pass
+    return []
+
+
+def _build_defensive_sector_set(C, current_date_str: str) -> set:
+    if (
+        getattr(C, "_defensive_sector_cache_date", None) == current_date_str
+        and getattr(C, "_defensive_sector_cache_set", None) is not None
+    ):
+        return C._defensive_sector_cache_set
+    names = getattr(C, "defensive_sector_names", []) or []
+    s = set(chain.from_iterable(_sector_constituents_safe(C, n) for n in names))
+    C._defensive_sector_cache_date = current_date_str
+    C._defensive_sector_cache_set = s
+    return s
+
+
+# ---------------------------------------------------------------------------
+# 卖出单标的逻辑（供 handlebar 循环调用）
+# ---------------------------------------------------------------------------
+def _process_sell_one_stock(C, stock: str, bar_date_str: str) -> None:
+    try:
+        buy_bar = C.buy_barpos.get(stock, C.barpos)
+        days_held = max(0, C.barpos - buy_bar)
+        in_min_hold = days_held < C.min_hold_days
+        bar_count = max(
+            getattr(C, "bar_count", 25),
+            days_held + 10,
+            getattr(C, "atr_period", 14) + 5,
+        )
+        data = C.get_market_data_ex(
+            ["close", "high", "low", "open"], [stock],
+            end_time=bar_date_str, period=getattr(C, "period", "1d"),
+            count=bar_count, subscribe=False,
+        )
+        if stock not in data or len(data[stock].get("close", [])) < 2:
+            return
+
+        closes = list(data[stock]["close"])
+        opens = list(data[stock]["open"])
+        highs = list(data[stock]["high"])
+        lows = list(data[stock]["low"])
+        current_price = closes[-1]
+        buy_price = C.buy_price.get(stock, current_price)
+
+        if opens[-1] <= 0:
+            return
+
+        sell_condition = False
+        sell_reason = ""
+
+        stop_triggered, stop_reason = _check_stop_loss_total(C, current_price, buy_price)
+        if stop_triggered:
+            sell_condition, sell_reason = True, stop_reason
+        elif not in_min_hold and talib is not None and days_held >= 1:
+            n_since_entry = min(days_held + 1, len(highs))
+            highest_high_since_entry = max(highs[-n_since_entry:])
             try:
-                fields = ['close', 'high', 'low', 'open']
-                if getattr(C, 'use_squeeze_entry', False):
-                    fields.append('volume')
-                data = C.get_market_data_ex(fields, [stock], end_time=bar_date_str, period='1d', count=C.bar_count, subscribe=False)
-                if stock not in data or len(data[stock]['close']) < C.min_closes_for_buy:
-                    continue
-                passed_data_filter += 1
+                atr_arr = talib.ATR(
+                    np.array(highs, dtype=np.float64),
+                    np.array(lows, dtype=np.float64),
+                    np.array(closes, dtype=np.float64),
+                    getattr(C, "atr_period", 14),
+                )
+                atr_14 = float(atr_arr[-1]) if len(atr_arr) and not np.isnan(atr_arr[-1]) else None
+            except Exception:
+                atr_14 = None
+            if atr_14 is not None and atr_14 > 0:
+                mult = getattr(C, "atr_stop_mult", 2.0)
+                stop_loss = highest_high_since_entry - atr_14 * mult
+                if current_price <= stop_loss:
+                    sell_condition = True
+                    sell_reason = (
+                        "ATR移动止损(最高{hh:.3f}-ATR*{m:.1f}={sl:.3f})".format(
+                            hh=highest_high_since_entry, m=mult, sl=stop_loss
+                        )
+                    )
 
-                closes = list(data[stock]['close'])
-                highs = list(data[stock]['high'])
-                lows = list(data[stock]['low'])
-                opens = list(data[stock]['open'])
-                volumes = list(data[stock].get('volume', [])) if 'volume' in data[stock] else None
-                current_close = closes[-1]
-                today_open = opens[-1]
+        if not sell_condition or stock not in C.buy_shares:
+            return
+        shares = C.buy_shares[stock]
+        if shares < C.min_shares:
+            return
+        passorder(24, 1101, C.accountid, stock, 5, 0, shares, STRATEGY_TAG_BREAKOUT, 1, "", C)
+        C.holding[stock] = False
+        profit = (current_price - buy_price) * shares
+        profit_pct = (current_price - buy_price) / buy_price
+        print(f"{bar_date_str} 卖出 {stock} {shares}股 @ {current_price:.3f} {sell_reason} 盈亏: {profit:.2f} ({profit_pct:.1%})")
+        _clear_holding_metadata(C, stock)
+        C.draw_text(1, 1, "卖")
+    except Exception as e:
+        print(f"卖出异常 {stock}: {e}")
 
-                if current_close <= 0 or today_open <= 0:
-                    continue
-                if current_close <= C.min_price:
-                    continue
-                passed_price_filter += 1
 
-                # 可选：挤压突破入场需同时满足（布林在肯特纳内连续3日 + 突破20日高 + 放量1.5倍）
-                if getattr(C, 'use_squeeze_entry', False):
-                    if not _check_squeeze_entry(closes, highs, lows, volumes):
-                        continue
+# ---------------------------------------------------------------------------
+# 横盘突破买入扫描
+# ---------------------------------------------------------------------------
+def _scan_sideways_breakout_candidates(
+    C, all_stocks: List[str], bar_date_str: str,
+) -> Tuple[List[Tuple[str, float, float]], Dict[str, int]]:
+    """返回 (候选列表, 统计计数器)。"""
+    stats = {
+        "sector": 0,
+        "data": 0,
+        "skipped_susp": 0,
+        "price": 0,
+        "sideways": 0,
+        "breakout": 0,
+    }
+    candidates: List[Tuple[str, float, float]] = []
 
-                avg_amplitude, price_range = calculate_sideways_metrics(highs, lows, closes, C.sideways_days)
-                if (C.amp_min <= avg_amplitude <= C.amp_max) and price_range <= C.price_range_max:
-                    passed_sideways_filter += 1
-                    today_return = (current_close - today_open) / today_open
-                    # 当日最高涨幅：盘中已摸涨停/近涨停（默认≥9.5%）则不符合「尾盘温和突破」，不买
-                    today_high_return = (highs[-1] - today_open) / today_open if today_open and today_open > 0 else 0
-                    if today_high_return >= C.today_high_return_max:
-                        continue
-                    if today_return > avg_amplitude * C.breakout_amp_mult and today_return < C.today_return_max:
-                        # 买入前三天（不含当日）不能连跌三天
-                        if _is_three_consecutive_down(closes):
-                            continue
-                        if not _pass_trend_filter(C, closes, highs, lows, opens):
-                            continue
-                        passed_trend_filter += 1
-                        passed_breakout_filter += 1
-                        # 截面因子：用于排序的值（市值最小优先时 sort_value 越小越靠前）
-                        sort_value = _get_sort_value(C, stock, current_close)
-                        candidates.append((stock, current_close, sort_value))
-
-            except Exception as e:
-                print(f"买入异常 {stock}: {e}")
-
-        # 截面选股：按因子排序后取前 N 只再下单（sort_by 已在 init 设定，此处只读一次）
-        sort_by = C.sort_by_factor
-        if sort_by == 'market_cap' and candidates:
-            candidates.sort(key=lambda x: x[2])   # 按市值升序，最小的在前
-        need_buy = min(C.max_stocks - current_holdings, len(candidates))
-        final_selected = 0
-
-        for i in range(need_buy):
-            stock, current_close, _ = candidates[i]
-            target_shares = int(C.per_stock_amount / current_close)
-            shares = (target_shares // C.min_shares) * C.min_shares
-            if shares < C.min_shares:
+    for stock in all_stocks:
+        if C.holding.get(stock, False) or _is_chinext_star_bse_or_st(stock):
+            continue
+        stats["sector"] += 1
+        try:
+            fields = ["close", "high", "low", "open"]
+            if getattr(C, "use_squeeze_entry", False) or getattr(C, "skip_suspended", True):
+                fields = fields + ["volume"] if "volume" not in fields else fields
+            data = C.get_market_data_ex(
+                fields, [stock], end_time=bar_date_str, period="1d",
+                count=C.bar_count, subscribe=False,
+            )
+            if stock not in data or len(data[stock]["close"]) < C.min_closes_for_buy:
                 continue
-            passorder(23, 1101, C.accountid, stock, 5, 0, shares, "横盘突破", 1, "", C)
-            C.holding[stock] = True
-            C.buy_price[stock] = current_close
-            C.buy_shares[stock] = shares
-            C.buy_date[stock] = current_date_str
-            C.buy_barpos[stock] = C.barpos
-            print(f"{bar_date_str} 买入 {stock} {shares}股 @ {current_close:.3f} 横盘突破")
-            C.draw_text(1, 1, '买')
-            final_selected += 1
+            stats["data"] += 1
 
-        tr_tag = f" 趋势{passed_trend_filter}" if getattr(C, 'trend_filter_mode', '') else ""
-        print(f"[{bar_date_str}] 筛选统计: 总分析{total_stocks} 板块{passed_sector_filter} 数据{passed_data_filter} 价格>{C.min_price}共{passed_price_filter} 横盘{passed_sideways_filter}{tr_tag} 突破{passed_breakout_filter} 候选{len(candidates)} 买入{final_selected}")
-    elif current_holdings < C.max_stocks and sz_below_ma240:
-        print(f"[{bar_date_str}] 深证破MA240不开新仓，当前持仓: {current_holdings}")
+            closes = list(data[stock]["close"])
+            highs = list(data[stock]["high"])
+            lows = list(data[stock]["low"])
+            opens = list(data[stock]["open"])
+            volumes = list(data[stock].get("volume", [])) if "volume" in data[stock] else None
+            if len(closes) < 2:
+                continue
+            if getattr(C, "skip_suspended", True) and _is_suspended_last_day(
+                volumes, highs, lows, closes, opens, getattr(C, "min_day_volume", 1),
+            ):
+                stats["skipped_susp"] += 1
+                continue
+
+            prev_close = float(closes[-2])
+            current_close = float(closes[-1])
+            if prev_close <= 0 or current_close <= 0 or current_close <= C.min_price:
+                continue
+            stats["price"] += 1
+
+            if getattr(C, "use_squeeze_entry", False) and not _check_squeeze_entry(
+                closes, highs, lows, volumes,
+            ):
+                continue
+
+            avg_amp, price_range = calculate_sideways_metrics(highs, lows, closes, C.sideways_days)
+            if not (C.amp_min <= avg_amp <= C.amp_max and price_range <= C.price_range_max):
+                continue
+            stats["sideways"] += 1
+
+            today_return = (current_close - prev_close) / prev_close
+            today_high_return = (float(highs[-1]) - prev_close) / prev_close if prev_close > 0 else 0.0
+            if today_high_return >= C.today_high_return_max:
+                continue
+            if not (
+                today_return > avg_amp * C.breakout_amp_mult
+                and today_return < C.today_return_max
+            ):
+                continue
+            if _is_three_consecutive_down(closes):
+                continue
+            stats["breakout"] += 1
+            sort_value = _get_sort_value(C, stock, current_close)
+            candidates.append((stock, current_close, sort_value))
+        except Exception as e:
+            print(f"买入异常 {stock}: {e}")
+
+    return candidates, stats
 
 
+def _run_sideways_buy(
+    C, bar_date_str: str, current_date_str: str, all_stocks: List[str], current_holdings: int,
+) -> None:
+    total_stocks = len(all_stocks)
+    candidates, st = _scan_sideways_breakout_candidates(C, all_stocks, bar_date_str)
+
+    if C.sort_by_factor == "market_cap" and candidates:
+        candidates.sort(key=lambda x: x[2])
+
+    need_buy = min(C.max_stocks - current_holdings, len(candidates))
+    to_buy = candidates[:need_buy]
+    final_selected = sum(
+        _execute_buy(
+            C, stock=s, price=p, bar_date_str=bar_date_str,
+            current_date_str=current_date_str, strategy_tag=STRATEGY_TAG_BREAKOUT,
+        )
+        for s, p, _ in to_buy
+    )
+
+    print(
+        f"[{bar_date_str}] 筛选统计: 总分析{total_stocks} 板块{st['sector']} 数据{st['data']} "
+        f"停牌剔除{st['skipped_susp']} 价格>{C.min_price}共{st['price']} 横盘{st['sideways']} "
+        f"突破{st['breakout']} 候选{len(candidates)} 买入{final_selected}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 防御买入
+# ---------------------------------------------------------------------------
+def _run_defensive_buy(
+    C, bar_date_str: str, current_date_str: str, all_stocks: List[str], current_holdings: int,
+) -> None:
+    if not getattr(C, "enable_defensive_ma240", True):
+        print(f"[{bar_date_str}] 深证破MA240，防御买入已关闭(enable_defensive_ma240=False)，当前持仓: {current_holdings}")
+        return
+
+    defensive_set = _build_defensive_sector_set(C, current_date_str)
+    require_sector = getattr(C, "defensive_require_sector", False)
+    if require_sector and len(defensive_set) == 0:
+        print(f"[{bar_date_str}] 深证破MA240：防御板块合并为空且 defensive_require_sector=True，跳过防御买入，持仓: {current_holdings}")
+        return
+
+    if len(defensive_set) == 0 and not getattr(C, "_warned_defensive_sector_empty", False):
+        print(f"[{bar_date_str}] 提示：防御板块合并为空，仅按财务+低波筛选（请核对 get_stock_list_in_sector 板块名）")
+        C._warned_defensive_sector_empty = True
+
+    vol_w = int(getattr(C, "defensive_vol_window", 60))
+    bc = max(int(getattr(C, "defensive_bar_count", 75)), vol_w + 5)
+    max_scan = int(getattr(C, "defensive_max_scan", 500) or 0)
+
+    prelim: List[Tuple[str, float, float]] = []
+    scanned = 0
+    for stock in all_stocks:
+        if max_scan > 0 and scanned >= max_scan:
+            break
+        scanned += 1
+        if C.holding.get(stock, False) or _is_chinext_star_bse_or_st(stock):
+            continue
+        if defensive_set and stock not in defensive_set:
+            continue
+        try:
+            data = C.get_market_data_ex(
+                ["close", "high", "low", "open", "volume"], [stock],
+                end_time=bar_date_str, period="1d", count=bc, subscribe=False,
+            )
+            if stock not in data or len(data[stock].get("close", [])) < C.min_closes_for_buy:
+                continue
+            closes = list(data[stock]["close"])
+            highs = list(data[stock]["high"])
+            lows = list(data[stock]["low"])
+            opens = list(data[stock]["open"])
+            volumes = list(data[stock].get("volume", [])) if "volume" in data[stock] else None
+            if len(closes) < 2:
+                continue
+            if getattr(C, "skip_suspended", True) and _is_suspended_last_day(
+                volumes, highs, lows, closes, opens, getattr(C, "min_day_volume", 1),
+            ):
+                continue
+            current_close = float(closes[-1])
+            if current_close <= 0 or current_close < C.min_price:
+                continue
+            ann_vol = _annualized_vol_from_closes(closes, vol_w)
+            if ann_vol is None or ann_vol > float(getattr(C, "defensive_max_ann_vol", 0.50)):
+                continue
+            prelim.append((stock, current_close, float(ann_vol)))
+        except Exception as e:
+            print(f"防御预选异常 {stock}: {e}")
+
+    fin_bs = max(1, int(getattr(C, "defensive_fin_batch", 40)))
+    chunks = [prelim[i : i + fin_bs] for i in range(0, len(prelim), fin_bs)]
+    candidates_def: List[Tuple[str, float, float]] = []
+    for chunk in chunks:
+        fin_map = _fetch_financial_metrics_batch(C, [x[0] for x in chunk], current_date_str)
+        candidates_def.extend(
+            (s, cc, sc)
+            for s, cc, av in chunk
+            for m in (fin_map.get(s),)
+            if m
+            for sc in (_defensive_pass_filters(C, m, cc, av),)
+            if sc is not None
+        )
+
+    candidates_def.sort(key=lambda x: -x[2])
+    need_buy = min(C.max_stocks - current_holdings, len(candidates_def))
+    to_buy_d = candidates_def[:need_buy]
+    final_d = sum(
+        _execute_buy(
+            C, stock=s, price=p, bar_date_str=bar_date_str,
+            current_date_str=current_date_str, strategy_tag=STRATEGY_TAG_DEFENSIVE,
+            log_suffix="(破MA240)",
+        )
+        for s, p, _ in to_buy_d
+    )
+    print(f"[{bar_date_str}] 防御买入统计: 扫描{scanned} 预选{len(prelim)} 财务通过{len(candidates_def)} 买入{final_d}")
+
+
+# ---------------------------------------------------------------------------
+# handlebar
+# ---------------------------------------------------------------------------
+def handlebar(C) -> None:
+    bar_date_str = timetag_to_datetime(C.get_bar_timetag(C.barpos), "%Y%m%d%H%M%S")
+    current_date_str = bar_date_str[:8]
+
+    all_stocks = get_stock_pool(C, bar_date_str)
+    print(f"[{bar_date_str}] 股票池大小: {len(all_stocks)} 只股票")
+
+    held = [s for s in list(C.holding.keys()) if C.holding.get(s, False)]
+    for stock in held:
+        _process_sell_one_stock(C, stock, bar_date_str)
+
+    sz_below = _is_sz_below_ma240(C, bar_date_str)
+    en_def = getattr(C, "enable_defensive_ma240", True)
+    print(f"[{bar_date_str}] 深证指数: {_sz_index_status_message(sz_below, en_def)}")
+
+    holdings = _active_holdings_count(C)
+    if holdings >= C.max_stocks:
+        return
+
+    if not sz_below:
+        _run_sideways_buy(C, bar_date_str, current_date_str, all_stocks, holdings)
+    else:
+        _run_defensive_buy(C, bar_date_str, current_date_str, all_stocks, holdings)
+
+
+# ---------------------------------------------------------------------------
+# 挤压 / 横盘指标 / 股票池 / 过滤
+# ---------------------------------------------------------------------------
 def _check_squeeze_entry(closes, highs, lows, volumes, bb_period=20, kc_mult=1.5, vol_mult=1.5):
-    """
-    挤压突破入场条件（需同时满足）：
-    - 布林带完全位于肯特纳通道内部（连续3日挤压）
-    - 收盘突破前20日最高价
-    - 成交量 > 20日均量 × vol_mult（如1.5倍）
-    使用 QMT 内置 talib：BBANDS、SMA、TRANGE。
-    返回 True 表示满足入场条件；数据不足或 talib 不可用时返回 False。
-    """
     if talib is None or len(closes) < 22 or len(highs) < 22 or len(lows) < 22:
         return False
     if volumes is None or len(volumes) < 21:
@@ -495,152 +859,148 @@ def _check_squeeze_entry(closes, highs, lows, volumes, bb_period=20, kc_mult=1.5
         close_arr = np.array(closes, dtype=np.float64)
         high_arr = np.array(highs, dtype=np.float64)
         low_arr = np.array(lows, dtype=np.float64)
-        # 布林带 BB(20, 2, 2)
         bb_upper, bb_middle, bb_lower = talib.BBANDS(close_arr, bb_period, 2, 2)
-        # 肯特纳通道：中轨 SMA(close,20)，带宽 SMA(TRANGE,20)，上下轨 ±1.5*带宽
         kc_middle = talib.SMA(close_arr, bb_period)
         tr = talib.TRANGE(high_arr, low_arr, close_arr)
         kc_range = talib.SMA(tr, bb_period)
         kc_upper = kc_middle + kc_mult * kc_range
         kc_lower = kc_middle - kc_mult * kc_range
-        # 挤压：布林带完全在肯特纳内
         squeeze_on = (bb_lower > kc_lower) & (bb_upper < kc_upper)
-        # 连续3天挤压（当日、前1日、前2日）
         if not (squeeze_on[-1] and squeeze_on[-2] and squeeze_on[-3]):
             return False
-        # 突破前20日最高价（不含当日，即 high[-21:-1]）
         prev_20_high = max(highs[-21:-1]) if len(highs) >= 21 else 0
         if closes[-1] <= prev_20_high or prev_20_high <= 0:
             return False
-        # 放量：当日量 > 20日均量 × vol_mult
         vol_ma20 = np.mean(volumes[-20:])
-        if vol_ma20 <= 0 or volumes[-1] <= vol_ma20 * vol_mult:
-            return False
-        return True
+        return vol_ma20 > 0 and volumes[-1] > vol_ma20 * vol_mult
     except Exception:
         return False
 
 
 def calculate_sideways_metrics(highs, lows, closes, period=20):
-    """计算横盘指标：平均振幅和价格波动区间"""
     if len(highs) < period + 1 or len(lows) < period + 1 or len(closes) < period + 1:
-        return float('inf'), float('inf')
+        return float("inf"), float("inf")
 
-    # 计算前period日的平均振幅（不包含最后一天）
-    amplitude_sum = 0
-    valid_days = 0
-    for i in range(len(closes) - period - 1, len(closes) - 1):
-        if closes[i] > 0:
-            high_low_diff = highs[i+1] - lows[i+1]
-            amplitude = high_low_diff / closes[i]
-            amplitude_sum += amplitude
-            valid_days += 1
+    idx = range(len(closes) - period - 1, len(closes) - 1)
+    amps = [(highs[i + 1] - lows[i + 1]) / closes[i] for i in idx if closes[i] > 0]
+    avg_amplitude = float("inf") if not amps else sum(amps) / len(amps)
 
-    if valid_days == 0:
-        avg_amplitude = float('inf')
-    else:
-        avg_amplitude = amplitude_sum / valid_days
-
-    # 计算前period日的价格波动区间（不包含最后一天）
-    recent_highs = highs[-period-1:-1]
-    recent_lows = lows[-period-1:-1]
-
-    if recent_highs and recent_lows:
-        period_high = max(recent_highs)
-        period_low = min(recent_lows)
-        if period_low > 0:
-            price_range = period_high / period_low
-        else:
-            price_range = float('inf')
-    else:
-        price_range = float('inf')
-
-    return avg_amplitude, price_range
+    recent_highs = highs[-period - 1 : -1]
+    recent_lows = lows[-period - 1 : -1]
+    if not recent_highs or not recent_lows:
+        return avg_amplitude, float("inf")
+    period_low = min(recent_lows)
+    if period_low <= 0:
+        return avg_amplitude, float("inf")
+    return avg_amplitude, max(recent_highs) / period_low
 
 
-def get_stock_pool(C, current_date_str):
-    """获取股票池 - （组合指数成分股），这是最可靠的方法"""
-    all_stocks = []
-
+def _index_constituents_safe(C, index_code: str) -> List[str]:
     try:
-        # 组合多个指数成分股（最可靠的方法）
-        index_stocks = []
-        indices = ['399007.SZ']
+        if hasattr(C, "get_index_constituent"):
+            s = C.get_index_constituent(index_code)
+            return list(s) if s else []
+        if hasattr(C, "get_sector"):
+            s = C.get_sector(index_code)
+            return list(s) if s else []
+    except Exception:
+        pass
+    return []
 
-        for index_code in indices:
-            try:
-                if hasattr(C, 'get_index_constituent'):
-                    stocks = C.get_index_constituent(index_code)
-                    if stocks:
-                        index_stocks.extend(stocks)
-                elif hasattr(C, 'get_sector'):
-                    stocks = C.get_sector(index_code)
-                    if stocks:
-                        index_stocks.extend(stocks)
-            except Exception:
-                continue
 
+def get_stock_pool(C, current_date_str: str) -> List[str]:
+    try:
+        index_stocks = [c for code in DEFAULT_STOCK_POOL_INDICES for c in _index_constituents_safe(C, code)]
         if index_stocks:
-            all_stocks = list(set(index_stocks))
-            print(f"组合指数成分股 {len(all_stocks)} 只")
-            return all_stocks
+            out = list(set(index_stocks))
+            print(f"组合指数成分股 {len(out)} 只")
+            return out
     except Exception as e:
         print(f"组合指数成分股失败: {e}")
+    return []
 
-    return all_stocks
 
-
-def _is_three_consecutive_down(closes):
-    """买入前三天（不含当日）是否连跌三天：前1日、前2日、前3日每日收盘均低于前一交易日收盘。"""
+def _is_three_consecutive_down(closes) -> bool:
     if len(closes) < 6:
         return False
-    down1 = closes[-2] < closes[-3]  # 前1日跌
-    down2 = closes[-3] < closes[-4]  # 前2日跌
-    down3 = closes[-4] < closes[-5]  # 前3日跌
-    return down1 and down2 and down3
+    return closes[-2] < closes[-3] and closes[-3] < closes[-4] and closes[-4] < closes[-5]
 
 
-def _get_sort_value(C, stock_code, current_close):
-    """截面选股用的排序值：规模因子=市值，越小越优先买入。获取失败时用收盘价近似（同池内低价常对应小市值）。"""
-    sort_by = C.sort_by_factor
-    if sort_by != 'market_cap':
-        return 0
+def _qmt_sort_market_cap(C, stock_code: str, price: float) -> Optional[float]:
     try:
-        if hasattr(C, 'get_instrument_detail'):
+        p = float(price)
+    except Exception:
+        p = 0.0
+    if p <= 0:
+        return None
+    for name in ("get_instrumentdetail", "get_instrumentDetail"):
+        if not hasattr(C, name):
+            continue
+        try:
+            inf = getattr(C, name)(stock_code)
+            if isinstance(inf, dict):
+                fv = inf.get("FloatVolume", inf.get("float_volume"))
+                tv = inf.get("TotalVolume", inf.get("total_volume"))
+                try:
+                    if fv is not None and float(fv) > 0:
+                        return float(fv) * p
+                    if tv is not None and float(tv) > 0:
+                        return float(tv) * p
+                except (TypeError, ValueError):
+                    pass
+        except Exception:
+            pass
+    if hasattr(C, "get_instrument_detail"):
+        for complete in (True, False):
+            try:
+                info = C.get_instrument_detail([stock_code], iscomplete=complete)
+            except TypeError:
+                break
+            except Exception:
+                continue
+            if info and stock_code in info:
+                inf = info[stock_code]
+                for k in ("circulation_market_value", "market_value"):
+                    try:
+                        v = inf.get(k, 0) if isinstance(inf, dict) else getattr(inf, k, 0)
+                        if v and float(v) > 0:
+                            return float(v)
+                    except Exception:
+                        pass
+        try:
             instrument_info = C.get_instrument_detail([stock_code])
             if instrument_info and stock_code in instrument_info:
                 info = instrument_info[stock_code]
-                if info.get('circulation_market_value', 0) > 0:
-                    return float(info['circulation_market_value'])
-                if info.get('market_value', 0) > 0:
-                    return float(info['market_value'])
-    except Exception:
-        pass
-    return float(current_close)
+                if isinstance(info, dict):
+                    for k in ("circulation_market_value", "market_value"):
+                        if info.get(k, 0) > 0:
+                            return float(info[k])
+        except Exception:
+            pass
+    return None
 
 
-def _is_chinext_star_bse_or_st(stock_code):
-    """剔除ST股、创业板、科创板、北交所"""
+def _get_sort_value(C, stock_code: str, current_close: float) -> float:
+    if C.sort_by_factor != "market_cap":
+        return 0.0
+    mv = _qmt_sort_market_cap(C, stock_code, current_close)
+    return float(mv) if (mv is not None and mv > 0) else float(current_close)
+
+
+def _is_chinext_star_bse_or_st(stock_code: str) -> bool:
     if not stock_code or len(stock_code) < 6:
         return False
-    code = stock_code.split('.')[0]
-    if code == '000408':
-        return True  # 单独剔除
-    suffix = (stock_code.split('.')[-1] or '').upper()
-    if suffix == 'BJ':
-        return True
-    if code.startswith('300'):
-        return True
-    if code.startswith('688') or code.startswith('689'):
-        return True
-    if code.startswith('920'):
-        return True
-    if 'ST' in stock_code.upper():
-        return True
-    return False
+    code = stock_code.split(".")[0]
+    suf = (stock_code.split(".")[-1] or "").upper()
+    risky_prefix = ("300", "688", "689", "920")
+    return (
+        suf == "BJ"
+        or any(code.startswith(p) for p in risky_prefix)
+        or "ST" in stock_code.upper()
+    )
 
 
-def timetag_to_datetime(timetag, format_str='%Y-%m-%d'):
+def timetag_to_datetime(timetag, format_str="%Y-%m-%d"):
     try:
         return time.strftime(format_str, time.localtime(timetag / 1000))
     except Exception:

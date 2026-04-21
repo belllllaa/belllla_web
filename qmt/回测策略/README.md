@@ -13,6 +13,15 @@
 | 文件 | 说明 |
 |------|------|
 | strategy_sideways_breakout_sz_ma240.py | 横盘异动突破 + 深证MA240 过滤，全扫描、截面按市值排序 |
+| strategy_turtle_rotation_10.py | 海龟突破 + 指数成分池扫描；突破后按动量打分排序买入；单票上限 10 万、无加仓；见 `init` 参数 |
+
+### strategy_sideways_breakout_sz_ma240 要点（与实盘一致）
+
+- **突破与涨幅**：`today_return`、`today_high_return` 均为 **相对昨收**（`prev_close = closes[-2]`）：  
+  - 当日涨幅：`(当日收盘 - 昨收) / 昨收`  
+  - 当日最高涨幅：`(当日最高 - 昨收) / 昨收`（用于过滤盘中冲过高、如近涨停的票）  
+- **横盘条件**仍为过去 N 日振幅/波动区间（不含「今开」口径）。  
+- 与 **`实盘策略/strategy_sideways_breakout_sz_ma240_1m_live.py`** 买入筛选口径对齐；回测用日线收盘价、实盘 14:45 用 tick/1m 取「当前价」，尾盘差异通常较小。
 
 ## 约定
 

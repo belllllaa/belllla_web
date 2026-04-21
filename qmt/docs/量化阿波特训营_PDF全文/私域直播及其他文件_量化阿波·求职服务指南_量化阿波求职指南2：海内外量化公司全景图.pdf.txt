@@ -1,0 +1,2331 @@
+源文件: d:\BaiduNetdiskDownload\2026.1 量化阿波·量化投资实战特训营\私域直播及其他文件\量化阿波·求职服务指南\量化阿波求职指南2：海内外量化公司全景图.pdf
+相对路径: 私域直播及其他文件\量化阿波·求职服务指南\量化阿波求职指南2：海内外量化公司全景图.pdf
+页数: 18
+
+============================================================
+
+
+===== 第 1 页 =====
+
+量化阿波求职指南系列：第2 册
+Quant Career Compass Series
+2. 海内外量化公司全景图
+The Complete Landscape of Global Quant Firms
+知己知彼→精准定位
+全景视野→战略选择
+量化阿波
+资深量化金融教育专家，专注于量化金融人才培养与职业发展规划。独创系统化刷题
+营、量化求职辅导资料库及核心课程体系，已成功指导数百名学员进入量化行业。学员录取
+成果覆盖CMU、NYU、UCB、Columbia 等北美顶尖金融工程/量化金融项目；就业去向包
+括Deutsche Bank、Goldman Sachs、J.P. Morgan 等国际顶级投行量化部门，以及国内外头
+部Hedge Fund、量化私募、公募基金和金融科技公司。
+擅长领域：量化面试辅导、金融工程申请规划、概率统计与随机过程、衍生品定价、算
+法交易策略、量化职业规划。
+联系方式
+量化阿波
+微信：youthbo94457697
+电话：18072739662
+2026 年1 月22 日
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 2 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+目录
+阿波老师寄语
+ii
+1
+国内量化公司全景图
+1
+1.1
+概述. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1
+1.2
+国内量化公司列表
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1
+1.3
+地域分布分析. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+5
+2
+海外量化公司全景图
+6
+2.1
+概述. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+6
+2.2
+海外量化公司列表
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+6
+2.3
+公司类型分析. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+11
+2.4
+地域分布分析. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+12
+3
+求职策略建议
+13
+i
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 3 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+阿波老师寄语
+在量化金融这个快速发展的领域，选择合适的公司是职业发展的关键一步。然而，面对琳琅满目的
+公司名单，很多求职者都会感到迷茫：哪些公司值得投递？不同类型的公司有什么区别？我应该如何制
+定求职策略？
+作为一名长期关注量化行业发展的从业者，我深知信息不对称给求职者带来的困扰。有的同学只知
+道几家头部公司，错过了很多优质的中小型机构；有的同学盲目海投，却不了解公司的业务特点和文化
+氛围。
+这本指南的目的，就是为你提供一份完整的量化公司地图。
+本书汇总了海内外300+ 量化公司的详细信息，按照公司类型、规模、地域进行分类整理。无论你是
+想进入顶级对冲基金，还是寻找成长性强的量化私募，都能在这里找到合适的目标。
+本书特色：
+信息全面：覆盖海内外主流量化机构
+分类清晰：按类型、规模、地域系统整理
+实时更新：提供官网链接，便于获取最新信息
+策略指导：针对不同背景提供求职建议
+目标：为你提供完整的量化公司信息库，制定精准的投递策略。
+记住：知己知彼，百战不殆。了解公司是求职成功的基础！
+量化阿波
+2026 年1 月22 日
+ii
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 4 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+1
+国内量化公司全景图
+1.1
+概述
+中国量化私募行业经过近十年的快速发展，已形成梯队分明的竞争格局。截至2026 年，头部量化私
+募管理规模已突破千亿大关，中腰部公司也在快速成长。
+国内量化公司特点
+• 地域集中：主要分布在北京、上海、浙江（杭州、宁波）、深圳
+• 规模分层：从50 亿到1000 亿，形成明显的梯队
+• 策略多样：涵盖中高频量价、基本面量化、CTA 等多种策略
+• 技术驱动：高度重视技术研发和人才培养
+1.2
+国内量化公司列表
+以下列表按管理规模排序，包含112 家主流量化私募公司。
+表1: 国内量化公司全景图（共112 家）
+【量化阿波制表】
+排序
+公司名称
+所在地
+规模
+官网
+1
+九坤投资
+北京
+700-1000 亿
+www.ubiquant.com
+2
+幻方量化
+浙江
+700-1000 亿
+www.high-flyer.cn
+3
+明汯投资
+上海
+700-1000 亿
+mhfunds.com
+4
+天演资本
+上海
+500-700 亿
+www.tianyancapital.com
+5
+灵均投资
+上海
+500-700 亿
+www.lingjuninvest.com
+6
+诚奇基金
+上海
+500-600 亿
+www.cqfunds.com
+7
+黑翼资产
+上海
+400-500 亿
+www.blackwingasset.com
+8
+顽岩资产
+上海
+300-400 亿
+www.wanyantech.com
+9
+量派投资
+上海
+300-400 亿
+www.qpalpha.com
+10
+龙旗科技
+浙江
+300-400 亿
+www.longcheer.com
+11
+金锝资产
+浙江
+300-500 亿
+www.jindefund.com
+12
+衍复投资
+上海
+300-500 亿
+yanfuinvestments.com
+13
+宽德投资
+上海
+300-500 亿
+www.wizardquant.com
+14
+因诺资产
+北京
+300-500 亿
+www.innoam.com
+15
+启林投资
+上海
+300-500 亿
+www.70capital.com
+16
+白鹭资管
+上海
+300-500 亿
+www.egretquant.com
+17
+茂源量化
+上海
+200-300 亿
+www.mycapital.net
+18
+信弘天禾
+北京
+200-300 亿
+x-asset.com
+19
+鸣石基金
+浙江
+200-300 亿
+www.mingshiim.com
+续下页
+1
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 5 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+表1 – 续表
+【量化阿波制表】
+排序
+公司名称
+所在地
+规模
+官网
+20
+进化论资产
+上海
+200-300 亿
+www.jhlfund.com
+21
+念空
+浙江
+200-300 亿
+goku-tech.com
+22
+世纪前沿
+北京
+200-300 亿
+www.centuryfrontier.com
+23
+致诚卓远
+北京
+200-300 亿
+zczyfund.cn
+24
+平方和投资
+上海
+200-300 亿
+alpha2fund.com
+25
+千象资产
+上海
+200-300 亿
+qxinvest.com
+26
+聚宽投资
+上海
+200-300 亿
+www.joinquant.com
+27
+锐天投资
+上海
+200-300 亿
+www.ruitiancapital.com
+28
+蒙玺投资
+上海
+150-200 亿
+mxifund.com
+29
+念觉资产
+浙江
+150-200 亿
+njassets.cn
+30
+图灵基金
+上海
+150-200 亿
+turingideas.com
+31
+倍漾量化
+上海
+150-200 亿
+www.baiont.ai
+32
+天算量化
+北京
+150-200 亿
+www.techsharpe.com
+33
+金戈量锐
+上海
+150-200 亿
+jingefund.com
+34
+稳博投资
+上海
+150-200 亿
+www.wenbofund.com
+35
+佳期投资
+上海
+150-200 亿
+www.jqinvestments.com
+36
+宁聚资产
+浙江
+150-200 亿
+zjfunds.com
+37
+卓识投资
+上海
+150-200 亿
+www.zsquant.com
+38
+洛书投资
+上海
+150-200 亿
+www.luoshu.com
+39
+赫富投资
+上海
+150-200 亿
+highfortfunds.com
+40
+盛冠达资产
+上海
+150-200 亿
+sz-sgd.com
+41
+思勰投资
+上海
+150-200 亿
+www.sixiecapital.com
+42
+远澜投资
+上海
+150-200 亿
+evolutionlabs.com.cn
+43
+泓澄投资
+上海
+150-200 亿
+www.hccapital.com.cn
+44
+安诚数盈
+上海
+150-200 亿
+alpha2capital.com
+45
+博普资产
+上海
+150-200 亿
+www.bopufund.com
+46
+天和投资
+北京
+150-200 亿
+www.sh-thtz.com
+47
+涵德投资
+上海
+150-200 亿
+www.hantak.cn
+48
+双隆投资
+上海
+150-200 亿
+solon.fund
+49
+汐泰投资
+上海
+150-200 亿
+www.xitaicapital.cn
+51
+海南图灵
+澄迈
+150-200 亿
+turingideas.com
+52
+超量子基金
+上海
+100-150 亿
+www.superquant.fund
+53
+大道投资
+上海
+100-150 亿
+dd-capital.com
+54
+聚量资产
+上海
+100-150 亿
+www.chinafusioncapital.com
+55
+盈峰资本
+浙江
+100-150 亿
+www.inforecapital.com
+56
+珠池资产
+上海
+100-150 亿
+www.jwasset.com.cn
+57
+中汇金投资
+上海
+100-150 亿
+www.shzhj.cn
+58
+衍盛资产
+上海
+100-150 亿
+derivatives-china.com
+续下页
+2
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 6 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+表1 – 续表
+【量化阿波制表】
+排序
+公司名称
+所在地
+规模
+官网
+59
+复胜资产
+上海
+100-150 亿
+fushengfund.com
+60
+上海泓信
+上海
+100-150 亿
+confiance-capital.com
+61
+金锝私募
+上海
+100-150 亿
+www.jindefund.com
+62
+平方和
+北京
+100-150 亿
+alpha2fund.com
+63
+博普科技
+深圳
+100-150 亿
+www.bopufund.com
+64
+盛泉恒元
+南京
+100 亿以上
+www.sqhyfund.com
+65
+博润银泰
+北京
+100 亿以上
+www.china-yintai.com
+66
+香量基金
+上海
+100 亿以上
+shannoninvestments.cn
+67
+千宜投资
+上海
+100 亿以上
+shannoninvestments.cn
+68
+艾方资产
+上海
+50-100 亿
+ifundasset.com
+69
+半鞅私募
+上海
+50-100 亿
+banyangcap.com
+70
+德贝基金
+上海
+50-100 亿
+h5.jfz.com
+71
+国恩资本
+上海
+50-100 亿
+www.guoenziben.com
+72
+凯读投资
+上海
+50-100 亿
+www.kendallsquarecap.com
+73
+宏锡基金
+上海
+50-100 亿
+www.hopeseek.cn
+74
+坤望基金
+上海
+50-100 亿
+mp.weixin.qq.com
+75
+量道投资
+上海
+50-100 亿
+m.liangdaofund.com
+76
+纽达投资
+上海
+50-100 亿
+www.newdaq.com
+77
+量魁私募
+上海
+50-100 亿
+masterquant.com.cn
+78
+鲁民投
+山东
+50-100 亿
+www.sdmytz.com
+79
+千衍基金
+上海
+50-100 亿
+www.qianyanhf.com
+80
+乾象投资
+上海
+50-100 亿
+www.metabit-trading.com
+81
+鸣熙资本
+上海
+50-100 亿
+www.mx-capital.com.cn
+82
+申毅投资
+上海
+50-100 亿
+www.shenyitz.com
+83
+丝路投资
+上海
+50-100 亿
+www.silkroadfund.com.cn
+84
+思睿投资
+上海
+50-100 亿
+www.growim.com
+85
+通怡投资
+上海
+50-100 亿
+tongyigroup.cn
+86
+微观博易
+上海
+50-100 亿
+www.microtrading.com
+87
+展弘投资
+上海
+50-100 亿
+zh-invest.net
+88
+正瀛资产
+上海
+50-100 亿
+www.geneasset.com
+89
+正定私募
+河北
+50-100 亿
+zding.fund
+90
+宽投资产
+上海
+50-100 亿
+quantinv.com
+91
+星石投资
+上海
+50-100 亿
+members.starrockinvest.com
+92
+子午投资
+上海
+50-100 亿
+www.meridianglobal.com.cn
+93
+云起量化
+上海
+50-100 亿
+yunqiquant.com
+94
+悦海盈和
+上海
+50-100 亿
+yuehaism.com
+95
+远和资产
+上海
+50-100 亿
+www.everonquant.cn
+96
+优美利投资
+上海
+50-100 亿
+ym-fund.com
+续下页
+3
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 7 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+表1 – 续表
+【量化阿波制表】
+排序
+公司名称
+所在地
+规模
+官网
+97
+象限资产
+上海
+50-100 亿
+wordpress.quadrantam.com
+98
+托特投资
+上海
+50-100 亿
+mp.weixin.qq.com
+99
+泊通投资
+上海
+50-100 亿
+h5.jinfuzi.com
+100
+盛丰私募
+深圳
+50-100 亿
+www.hn-shengfeng.com
+101
+千朔投资
+上海
+50-100 亿
+kilosunfund.com
+102
+孝庸私募
+上海
+50-100 亿
+xyasset.cn
+103
+超量子
+深圳
+50-100 亿
+www.superquant.fund
+104
+思晔投资
+上海
+50-100 亿
+siyecapital.com
+105
+鸣熙资产
+上海
+50-100 亿
+www.mx-capital.com.cn
+106
+斯道资本
+上海
+50-100 亿
+eightroads.com
+107
+均成资产
+深圳
+50-100 亿
+www.parigain.com
+108
+千惠资本
+深圳
+50-100 亿
+www.keywayfund.com
+109
+大岩资本
+深圳
+50-100 亿
+www.jaspercapital.com
+110
+喜岳投资
+上海
+50-100 亿
+www.xy-inv.com
+111
+腾胜投资
+上海
+50-100 亿
+www.twosigma.cn
+112
+德劭投资
+上海
+50-100 亿
+www.deshaw.com
+4
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 8 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+1.3
+地域分布分析
+国内量化公司地域特点
+上海（约70 家）
+• 国内量化中心，公司数量最多
+• 涵盖各种规模和策略类型
+• 金融生态完善，人才聚集
+浙江（约15 家）
+• 以杭州、宁波为主
+• 幻方、金锝等头部公司
+• 技术氛围浓厚
+北京（约12 家）
+• 九坤等头部公司
+• 偏重基本面量化
+• 政策资源优势
+深圳（约8 家）
+• 大岩资本等知名公司
+• 科技创新氛围
+• 港股交易便利
+5
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 9 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+2
+海外量化公司全景图
+2.1
+概述
+海外量化行业发展历史悠久，形成了完整的生态体系。从传统投行的量化部门，到专业的量化对冲
+基金，再到高频交易公司和做市商，各类机构百花齐放。
+海外量化公司特点
+• 类型多样：投行、对冲基金、HFT、做市商、资管公司
+• 地域广泛：美国、欧洲、亚太地区均有分布
+• 技术领先：在算法、基础设施方面处于全球前沿
+• 薪酬优厚：顶级公司提供极具竞争力的薪酬
+2.2
+海外量化公司列表
+以下列表包含138 家海外主流量化公司，按公司类型和影响力排序。
+表2: 海外量化公司全景图（共138 家）
+【量化阿波制表】
+排名
+公司名称
+公司类型
+所在地
+官网
+1
+BlackRock
+资产管理公司
+美国-纽约
+www.blackrock.com
+2
+Goldman Sachs
+投行-量化部门
+美国-纽约
+www.goldmansachs.com
+3
+JP Morgan
+投行-量化部门
+美国-纽约
+www.jpmorgan.com
+4
+Morgan Stanley
+投行-量化部门
+美国-纽约
+www.morganstanley.com
+5
+Citadel
+对冲基金
+美国-芝加哥
+www.citadel.com
+6
+Bridgewater Associates
+对冲基金
+美国-康涅狄格
+www.bridgewater.com
+7
+Renaissance Technologies
+量化对冲基金
+美国-纽约
+www.rentec.com
+8
+Two Sigma
+量化对冲基金
+美国-纽约
+www.twosigma.com
+9
+D.E. Shaw & Co
+量化对冲基金
+美国-纽约
+www.deshaw.com
+10
+Jane Street
+量化交易做市
+美国-纽约
+www.janestreet.com
+11
+Citadel Securities
+做市商
+美国-芝加哥
+citadelsecurities.com
+12
+State Street Global Advisors
+资产管理公司
+美国-波士顿
+www.ssga.com
+13
+UBS
+投行-量化部门
+瑞士-苏黎世
+www.ubs.com
+14
+Citibank
+投行-量化部门
+美国-纽约
+www.citi.com
+15
+Barclays
+投行-量化部门
+英国-伦敦
+www.barclays.co.uk
+16
+Deutsche Bank
+投行-量化部门
+德国-法兰克福
+deutsche-bank.de
+17
+Credit Suisse
+投行-量化部门
+瑞士-苏黎世
+credit-suisse.com
+18
+BNP Paribas
+投行-量化部门
+法国-巴黎
+group.bnpparibas
+19
+HSBC
+投行-量化部门
+美国-纽约
+www.hsbc.com
+20
+Bank of America
+投行-量化部门
+美国-夏洛特
+bankofamerica.com
+21
+AQR Capital Management
+量化投资公司
+美国-格林威治
+www.aqr.com
+22
+Millennium Management
+多策略对冲
+美国-纽约
+www.mlp.com
+23
+Point72 Asset Management
+对冲基金
+美国-康涅狄格
+www.point72.com
+续下页
+6
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 10 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+表2 – 续表
+【量化阿波制表】
+排名
+公司名称
+公司类型
+所在地
+官网
+24
+Susquehanna
+International
+Group
+量化交易做市
+美国-费城
+sig.com
+25
+Jump Trading
+量化交易公司
+美国-芝加哥
+www.jumptrading.com
+26
+DRW Trading
+量化交易公司
+美国-芝加哥
+drw.com
+27
+Optiver
+做市商
+荷兰-阿姆斯特
+丹
+www.optiver.com
+28
+IMC Trading
+做市商交易
+荷兰-阿姆斯特
+丹
+www.imc.com
+29
+Tower Research Capital
+高频交易公司
+美国-纽约
+tower-research.com
+30
+Hudson River Trading
+量化交易公司
+美国-纽约
+hudsonrivertrading.com
+31
+Virtu Financial
+上市HFT 公司
+美国-纽约
+www.virtu.com
+32
+XTX Markets
+算法交易公司
+英国-伦敦
+www.xtxmarkets.com
+33
+Man Group
+对冲基金集团
+英国-伦敦
+www.man.com
+34
+Wellington Management
+资管-量化部门
+美国-波士顿
+www.wellington.com
+35
+Dimensional Fund Advisors
+系统化投资
+美国-奥斯汀
+www.dimensional.com
+36
+WorldQuant
+量化对冲基金
+美国-纽约
+www.worldquant.com
+37
+Marshall Wace
+对冲基金
+英国-伦敦
+www.mwam.com
+38
+Brevan Howard
+宏观对冲基金
+英国-伦敦
+www.brevanhoward.com
+39
+Winton
+Capital
+Manage-
+ment
+量化投资公司
+英国-伦敦
+www.winton.com
+40
+GSA Capital Partners
+量化对冲基金
+英国-伦敦
+www.gsacapital.com
+41
+Quadrature Capital
+量化对冲基金
+英国-伦敦
+quadrature.ai
+42
+G-Research
+量化金融研究
+英国-伦敦
+www.gresearch.com
+43
+CFM
+量化对冲基金
+法国-巴黎
+www.cfm.fr
+44
+Balyasny
+Asset
+Manage-
+ment
+多策略对冲
+美国-纽约
+www.bamfunds.com
+45
+Schonfeld
+Strategic
+Advi-
+sors
+多策略对冲
+美国-纽约
+www.schonfeld.com
+46
+ExodusPoint Capital
+多策略对冲
+美国-纽约
+www.exoduspoint.com
+47
+Guggenheim
+资产管理公司
+美国-纽约
+guggenheimpartners.com
+48
+Ares Management
+资管-量化部门
+美国-洛杉矶
+www.aresmgmt.com
+49
+PanAgora
+Asset
+Manage-
+ment
+量化资产管理
+美国-波士顿
+www.panagora.com
+50
+Arrowstreet Capital
+量化股票投资
+美国-波士顿
+arrowstreetcapital.com
+51
+Acadian Asset Management
+量化资产管理
+美国-波士顿
+acadian-asset.com
+52
+Tudor Investment Corpora-
+tion
+宏观对冲基金
+美国-斯坦福德
+www.tudorfunds.com
+53
+Rokos Capital Management
+多资产投资
+英国-伦敦
+www.rokoscapital.com
+54
+PDT Partners
+量化交易公司
+美国-纽约
+pdtpartners.com
+55
+Voleon Group
+机器学习量化
+美国-伯克利
+www.voleon.com
+56
+Cubist
+Systematic
+Strate-
+gies
+对冲基金-量化
+美国-纽约
+point72.com/cubist
+57
+Squarepoint Capital
+系统化量化
+美国-纽约
+squarepoint-capital.com
+58
+Qube Research & Technolo-
+gies
+量化交易公司
+美国-纽约
+www.qube-rt.com
+续下页
+7
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 11 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+表2 – 续表
+【量化阿波制表】
+排名
+公司名称
+公司类型
+所在地
+官网
+59
+Akuna Capital
+期权做市商
+美国-芝加哥
+akunacapital.com
+60
+Wolverine Trading
+做市商交易
+美国-芝加哥
+www.wolve.com
+61
+Old Mission Capital
+量化交易公司
+美国-芝加哥
+oldmissioncapital.com
+62
+Geneva Trading
+期权交易公司
+美国-芝加哥
+www.genevatrading.com
+63
+Group One Trading
+自营交易公司
+美国-芝加哥
+www.genevatrading.com
+64
+DV Trading
+自营交易做市
+美国-芝加哥
+dvtrading.co
+65
+TransMarket Group (TMG)
+自营交易公司
+美国-芝加哥
+transmarketgroup.com
+66
+Aspect Capital
+系统化交易
+英国-伦敦
+www.aspectcapital.com
+67
+Systematica Investments
+系统化宏观
+英国-伦敦
+www.systematica.com
+68
+Graham
+Capital
+Manage-
+ment
+系统化宏观
+美国-康涅狄格
+www.grahamcapital.com
+69
+Capula Investment Manage-
+ment
+宏观对冲基金
+美国-纽约
+www.capula.com
+70
+Verition Fund Management
+多策略对冲
+美国-格林威治
+www.verition.com
+71
+Capstone Investment Advi-
+sors
+多策略对冲
+美国-纽约
+www.capstoneco.com
+72
+Laurion
+Capital
+Manage-
+ment
+多策略对冲
+美国-纽约
+www.laurioncap.com
+73
+HAP Capital
+量化对冲基金
+美国-纽约
+www.hapcap.com
+74
+Aquatic
+Capital
+Manage-
+ment
+量化对冲基金
+美国-芝加哥
+aquatic.com
+75
+Ellington
+Management
+Group
+量化信用基金
+美国-康涅狄格
+ellingtonmanagement.com
+76
+Numeric
+对冲基金-量化
+美国-旧金山
+www.numeric.com
+77
+Flow Traders
+上市做市商
+荷兰-阿姆斯特
+丹
+www.flowtraders.com
+78
+Transtrend
+系统化期货
+荷兰
+www.transtrend.com
+79
+Lynx Asset Management
+系统化期货
+爱尔兰-都柏林
+www.lynxhedge.se
+80
+Lynx Asset Management
+系统化期货
+瑞典-斯德哥尔
+摩
+www.lynxhedge.se
+81
+Pictet Asset Management
+资产管理公司
+瑞士-日内瓦
+www.am.pictet
+82
+Unigestion
+量化投资公司
+瑞士-日内瓦
+www.unigestion.com
+83
+Berenberg
+私人银行-量化
+德国-汉堡
+www.berenberg.com
+84
+Quoniam
+Asset
+Manage-
+ment
+量化资产管理
+德国-法兰克福
+www.quoniam.com
+85
+Brummer & Partners
+对冲基金集团
+瑞典-斯德哥尔
+摩
+www.brummer.se
+86
+Macquarie Group
+综合金融-量化
+澳大利亚-悉尼
+www.macquarie.com
+87
+Mirae Asset Global Invest-
+ments
+资产管理公司
+韩国-首尔
+miraeasset.us
+88
+Samsung
+Asset
+Manage-
+ment
+资产管理公司
+韩国-首尔
+www.samsungfund.com
+89
+Sparx Group
+资产管理公司
+日本-东京
+www.sparxgroup.com
+90
+Dymon Asia Capital
+宏观对冲基金
+新加坡
+www.dymonasia.com
+91
+Quantedge Capital
+系统化量化宏观
+新加坡
+www.quantedge.com
+续下页
+8
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 12 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+表2 – 续表
+【量化阿波制表】
+排名
+公司名称
+公司类型
+所在地
+官网
+92
+Connor, Clark & Lunn Fi-
+nancial Group
+量化投资公司
+加拿大-温哥华
+www.cclgroup.com
+93
+Geode Capital Management
+量化资产管理
+加拿大-多伦多
+www.geodecapital.com
+94
+Polar
+Asset
+Management
+Partners
+对冲基金
+加拿大-多伦多
+www.polarasset.com
+95
+Bluefin Trading
+自营交易公司
+加拿大-多伦多
+bluefin.io
+96
+Picton Mahoney Asset Man-
+agement
+另类投资管理
+加拿大-多伦多
+www.pictonmahoney.com
+97
+Paradice Investment Man-
+agement
+投资管理公司
+澳大利亚-悉尼
+www.paradice.com
+98
+Bennelong Funds Manage-
+ment
+基金管理公司
+澳大利亚-悉尼
+www.bennelongfunds.com
+99
+KB Asset Management
+资产管理公司
+韩国-首尔
+www.kbam.co.kr
+100
+Simplex Asset Management
+量化投资公司
+日本-东京
+simplexasset.com
+101
+GCI Asset Management
+对冲基金
+日本-东京
+www.gci.co.jp
+102
+Taiyo Pacific Partners
+对冲基金
+日本-东京
+taiyofunds.com
+103
+OQ Funds Management
+量化对冲基金
+日本-东京
+adviserinfo.sec.gov
+104
+Vulpes Investment Manage-
+ment
+量化投资公司
+新加坡
+www.vulpesinvest.com
+105
+Modular Asset Management
+量化基金
+新加坡
+www.modular.com.sg
+106
+Azentus
+Capital
+Manage-
+ment
+量化对冲基金
+香港
+www.azentus.com
+107
+LIM Advisors
+量化基金
+香港
+www.limadvisors.com
+108
+Wintermute
+加密货币做市
+英国-伦敦
+www.wintermute.com
+109
+Valkyrie Trading
+加密货币投资
+美国-芝加哥
+valkyrietrading.com
+110
+Wincent Trading
+加密货币交易
+直布罗陀
+www.wincent.com
+111
+Albatross Labs
+加密货币量化
+新加坡
+www.albatrosslabs.io
+112
+Freestone Grove Partners
+资产管理公司
+美国-旧金山
+fgrovep.com
+113
+Vector Trading
+私募股权投资
+美国-旧金山
+vectortrading.com
+114
+Parallax Volatility Advisers
+波动率交易
+美国-旧金山
+parallaxvolatility.com
+115
+GTS (Global Trading Sys-
+tems)
+做市商
+美国-纽约
+gtsx.com
+116
+Five Rings Capital
+量化自营交易
+美国-纽约
+fiverings.com
+117
+Vatic Investments
+系统化交易
+美国-纽约
+www.vaticlabs.ai
+118
+Volant Trading
+量化交易公司
+美国-纽约/香港
+volanttrading.com
+119
+WH Trading
+自营交易公司
+美国-芝加哥
+linkedin.com/wh-trading
+120
+Eschaton Trading
+自营交易公司
+美国-芝加哥
+eschatontrading.com
+121
+Kore Trading
+自营交易公司
+美国-芝加哥
+www.koretrading.com
+122
+TGS Management
+量化投资管理
+美国-尔湾
+www.tgsmc.com
+123
+Walleye Capital
+量化交易公司
+美国-明尼苏达
+walleyetrading.com
+124
+Tradebot Systems
+HFT 公司
+美国-堪萨斯城
+www.tradebot.com
+125
+All Options
+期权交易公司
+荷兰-阿姆斯特
+丹
+www.alloptions.nl
+126
+Maven Securities
+交易与技术
+英国-伦敦
+mavensecurities.com
+127
+Boerboel Trading
+自营交易公司
+英国-伦敦
+boerboeltrading.com
+续下页
+9
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 13 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+表2 – 续表
+【量化阿波制表】
+排名
+公司名称
+公司类型
+所在地
+官网
+128
+Ariose Capital
+量化基金
+香港
+ariose.capital
+129
+Alpine Capital
+量化基金
+香港
+alpineinvestors.com
+130
+Kaizen Asset Management
+量化基金
+香港
+kaizensoftware.com
+131
+Triata Capital
+量化基金
+香港
+www.triatacapital.com
+132
+ARCM
+量化基金
+香港
+advancedrevcycle.com
+133
+Golden Pine Capital
+量化基金
+香港
+goldenpinescapital.com
+134
+AOP Capital
+量化基金
+香港
+aopcapital.com
+135
+ActusRayPartners
+量化基金
+香港
+www.shkcapital.com
+136
+Arcane Capital Advisors
+量化基金
+香港
+arcane-capital.com
+137
+Millennium Partners
+多策略对冲
+美国-纽约
+www.mlp.com
+138
+Schonfeld
+Strategic
+Advi-
+sors
+多策略对冲
+美国-纽约
+www.schonfeld.com
+10
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 14 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+2.3
+公司类型分析
+海外量化公司类型特点
+投资银行量化部门
+• 代表：Goldman Sachs, JP Morgan, Morgan Stanley
+• 特点：综合平台，业务多样，培训体系完善
+• 适合：应届生入行，寻求稳定发展
+量化对冲基金
+• 代表：Renaissance Technologies, Two Sigma, D.E. Shaw
+• 特点：策略研究深入，技术要求高，薪酬优厚
+• 适合：有研究能力，追求高回报
+高频交易/做市商
+• 代表：Jane Street, Citadel Securities, Optiver, IMC
+• 特点：技术驱动，节奏快，对编程和数学要求极高
+• 适合：技术能力强，喜欢快节奏工作
+多策略对冲基金
+• 代表：Millennium, Point72, Balyasny
+• 特点：策略多元，团队独立，绩效导向
+• 适合：有专长领域，追求自主性
+资产管理公司
+• 代表：BlackRock, State Street, Wellington
+• 特点：规模大，客户多样，相对稳定
+• 适合：偏好长期投资，注重工作生活平衡
+11
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 15 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+2.4
+地域分布分析
+海外量化公司地域特点
+美国-纽约（约50 家）
+• 全球量化金融中心
+• 薪酬水平最高，竞争最激烈
+• 代表：Renaissance, Two Sigma, D.E. Shaw, Jane Street
+美国-芝加哥（约20 家）
+• 期权交易和做市商聚集地
+• 以高频交易和衍生品交易为主
+• 代表：Citadel, Jump Trading, DRW, Akuna Capital
+美国-其他地区（约15 家）
+• 波士顿：资产管理公司集中（State Street, Wellington）
+• 旧金山/硅谷：科技与金融结合（Numeric）
+• 康涅狄格州：传统对冲基金（Bridgewater, Point72）
+英国-伦敦（约15 家）
+• 欧洲量化金融中心
+• 代表：Man Group, XTX Markets, G-Research
+欧洲大陆（约15 家）
+• 荷兰：做市商强国（Optiver, IMC, Flow Traders）
+• 瑞士：私人银行和资管（UBS, Credit Suisse, Pictet）
+• 法德：传统金融机构（BNP Paribas,Deutsche Bank, Quoniam）
+亚太地区（约20 家）
+• 香港：亚洲量化中心，连接中国市场
+• 新加坡：亚洲对冲基金枢纽
+• 日本/韩国：本土资管公司
+• 澳大利亚：独立市场，本土机构为主
+12
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 16 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+3
+求职策略建议
+如何使用本指南
+第一步：自我定位
+• 评估自身背景：学历、专业、技能、经验
+• 明确职业目标：研究、交易、技术、风控
+• 确定地域偏好：国内/海外、一线/二线城市
+第二步：筛选目标公司
+• 根据规模筛选：头部/中型/成长型
+• 根据类型筛选：私募/投行/HFT/资管
+• 根据地域筛选：目标城市/国家
+• 建议：准备10-20 家目标公司清单
+第三步：深入研究
+• 访问官网招聘界面了解公司文化和岗位要求
+• 通过LinkedIn 寻找校友和内推
+• 关注公司新闻和业绩表现
+第四步：针对性准备
+• 根据岗位、公司要求准备面试
+• 参考《指南6：量化求职必刷100 题》
+第五步：持续跟进
+• 记录申请进度和面试反馈
+• 及时跟进HR 和面试官
+• 不断优化求职策略
+13
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 17 页 =====
+
+量化阿波
+|
+微信: youthbo94457697
+|
+电话: 18072739662
+持续更新
+本指南持续更新，欢迎补充和纠正
+如有帮助，欢迎转发分享
+祝您在量化金融的道路上越走越远！
+如果您在职业规划或求职过程中有任何疑问，欢迎联系量化阿波
+我们提供：
+个性化职业规划咨询- 根据个人背景制定最优发展路径
+简历优化和面试辅导- 专业指导，提升求职成功率
+高含金量的项目指导- 实战项目，增强简历竞争力
+体系化的量化课程- 系统学习，夯实理论基础
+丰富的行业题库- 海量真题，全面覆盖考点
+笔面试教学指导- 一对一辅导，精准突破难点
+行业内推和networking 机会- 拓展人脉，获取内部机会
+量化阿波
+微信：youthbo94457697
+电话：18072739662
+专业·高效·贴心
+© 2026 量化阿波求职指南系列
+|
+版权所有，转载请注明出处
+14
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739
+
+
+===== 第 18 页 =====
+
+量化阿波求职指南系列
+Quant Career Compass Series
+指南1:
+量化三大岗位对比
+指南2:
+海内外量化公司全景图(本册)
+指南3:
+如何辨别量化公司
+指南4:
+2026 年上半年行动指南
+指南5:
+量化学习最简清单
+指南6:
+量化求职必刷100 题
+指南7:
+量化面试真题库（国内版）
+指南8:
+量化面试真题库（海外版）
+指南9:
+量化简历优化手册
+指南10:
+量化Network 指南
+指南11:
+量化Offer 选择指南
+指南12:
+量化职业发展指南
+完整系列持续更新中
+关注量化阿波，获取最新资料
+微信：youthbo94457697
+电话：18072739662
+量化阿波 youthbo94457697
+18072739662
+thbo94457697
+化阿波 youthbo94457697
+39662
+阿波 youthbo94457697
+8072739662
+bo94457697
+2
+7
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthbo94457697
+18072739662
+阿波 youthbo94457697
+8072739662
+量化阿波
+1807
+量化阿波 youthbo9
+18072739662
+量化阿波 youthbo94457697
+18072739662
+量化阿波 youthb
+18072739662
+量化阿
+18072739

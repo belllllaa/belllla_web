@@ -37,14 +37,15 @@ qmt/
 ├── 回测策略/                    # 仅用于 QMT 回测的策略
 │   ├── __init__.py
 │   ├── README.md                # 回测策略说明与约定
-│   ├── strategy_sideways_breakout_sz_ma240.py   # 横盘异动突破 + 深证MA240
+│   ├── strategy_sideways_breakout_sz_ma240.py   # 横盘异动突破 + 深证MA240（突破涨幅相对昨收，见该目录 README）
 │   └── strategy_momentum_trend_rotation.py     # 强势趋势轮动（多周期动量+量能）
 ├── 实盘策略/                    # 用于 QMT 实盘/模拟的策略
 │   ├── __init__.py
 │   ├── README.md                # 实盘策略说明与约定
 │   ├── README_横盘突破策略_QMT合规检查.md
 │   ├── strategy_sideways_breakout_official_style.py  # 横盘突破（官方框架、全推、撤单重下）
-│   └── strategy_sideways_breakout_sz_ma240_live.py   # 横盘异动+深证MA240 实盘
+│   ├── strategy_sideways_breakout_sz_ma240_live.py   # 横盘异动+深证MA240 实盘
+│   └── strategy_sideways_breakout_sz_ma240_1m_live.py # 同上 1 分钟周期 / 14:45；买入涨幅相对昨收
 ├── utils/                       # 工具
 │   ├── __init__.py
 │   ├── data_helper.py           # 数据获取封装
@@ -96,8 +97,8 @@ qmt/
 | **回测策略/** | 仅回测 | 不依赖实盘接口（如 get_trade_detail_data、全推），适合历史回测 |
 | **实盘策略/** | 实盘/模拟 | 使用账户、持仓、委托回报等，带防超单、撤单重下、全推价等 |
 
-- 回测策略说明：[回测策略/README.md](回测策略/README.md)
-- 实盘策略说明：[实盘策略/README.md](实盘策略/README.md)
+- 回测策略说明：[回测策略/README.md](回测策略/README.md)（横盘 `sz_ma240`：突破/涨幅 **相对昨收**）
+- 实盘策略说明：[实盘策略/README.md](实盘策略/README.md)（`sz_ma240_1m_live` 与回测同口径）
 - 三策略（ETF/银行/双ETF）说明：[strategies/README_三策略说明.md](strategies/README_三策略说明.md)
 
 ---
