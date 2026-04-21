@@ -57,6 +57,9 @@ STRATEGY_DEFAULTS = {
     "intraday_touch_pct": -0.08,
     "intraday_fail_recover_pct": -0.06,
     "tail_clear_start_hhmmss": 145000,
+    # A 档首买仅在开盘窗口内（与实盘一致）；加仓腿仍全天连续竞价按今开
+    "a_first_buy_start_hhmmss": 92500,
+    "a_first_buy_end_hhmmss": 93559,
 }
 
 
@@ -196,6 +199,19 @@ def _in_session_trade(hhmmss):
     if 130000 <= hhmmss <= 150000:
         return True
     return False
+
+
+def _a_preopen_for_first_buy_bt(C, hhmmss):
+    if hhmmss is None:
+        return False
+    try:
+        h = int(hhmmss)
+    except Exception:
+        return False
+    a0 = int(_cfg(C, "a_first_buy_start_hhmmss"))
+    if a0 >= 93000:
+        return False
+    return a0 <= h < 93000
 
 
 def _canonical_stock_code(s):
@@ -557,11 +573,15 @@ def handlebar(C):
         def run_index_liquidate():
             if not index_liquidate_all:
                 return
+            if not _in_session_trade(hhmmss):
+                return
             for stock in list(C.holding.keys()):
                 if C.holding.get(stock):
                     liquidate_stock(stock, "上证破MA10清仓")
 
         def run_risk_sell():
+            if not _in_session_trade(hhmmss):
+                return
             for stock in list(C.holding.keys()):
                 if not C.holding.get(stock):
                     continue
@@ -656,11 +676,13 @@ def handlebar(C):
         def run_pyramid_and_entry():
             if period != "1m":
                 return
-            if not _in_session_trade(hhmmss):
-                return
 
             ph = _primary_holding_stock(C)
             if ph:
+                if not _in_session_trade(hhmmss):
+                    br_ph = C.gap_bracket.get(ph)
+                    if not (br_ph == "A" and _a_preopen_for_first_buy_bt(C, hhmmss)):
+                        return
                 stock = ph
                 bracket = C.gap_bracket.get(stock)
                 anchor = C.anchor_buy.get(stock)
@@ -689,56 +711,90 @@ def handlebar(C):
                     return
 
                 if bracket == "A":
-                    if not legs[1] and price_now <= anchor * 0.95:
-                        if _apply_buy_leg(
-                            C,
-                            stock,
-                            notional * 0.30,
-                            price_now,
-                            dt_full,
-                            d_str,
-                            mos,
-                            "\u3010A\u6863\u3011\u52a0\u4ed330%\u951ax0.95",
-                        ):
-                            legs[1] = True
-                    if not legs[2] and price_now <= anchor * 0.92:
-                        if _apply_buy_leg(
-                            C,
-                            stock,
-                            notional * 0.20,
-                            price_now,
-                            dt_full,
-                            d_str,
-                            mos,
-                            "\u3010A\u6863\u3011\u52a0\u4ed320%\u951ax0.92",
-                        ):
-                            legs[2] = True
-                elif bracket in ("B", "C"):
-                    if not legs[1] and price_now <= anchor * 0.97:
-                        if _apply_buy_leg(
-                            C,
-                            stock,
-                            notional * 0.20,
-                            price_now,
-                            dt_full,
-                            d_str,
-                            mos,
-                            ("\u3010%s\u6863\u3011\u52a0\u4ed320%\u951ax0.97" % bracket),
-                        ):
-                            legs[1] = True
-                    if not legs[2] and price_now <= anchor * 0.95:
-                        if _apply_buy_leg(
-                            C,
-                            stock,
-                            notional * 0.30,
-                            price_now,
-                            dt_full,
-                            d_str,
-                            mos,
-                            ("\u3010%s\u6863\u3011\u52a0\u4ed330%\u951ax0.95" % bracket),
-                        ):
-                            legs[2] = True
+                    o_a = C.open_px.get(stock)
+                    if o_a is not None and o_a > 0:
+                        if not legs[1] and price_now <= o_a * 0.95:
+                            if _apply_buy_leg(
+                                C,
+                                stock,
+                                notional * 0.30,
+                                price_now,
+                                dt_full,
+                                d_str,
+                                mos,
+                                "\u3010A\u6863\u3011\u52a0\u4ed330%|\u4eca\u5f00x0.95(-5%)",
+                            ):
+                                legs[1] = True
+                        if not legs[2] and price_now <= o_a * 0.92:
+                            if _apply_buy_leg(
+                                C,
+                                stock,
+                                notional * 0.20,
+                                price_now,
+                                dt_full,
+                                d_str,
+                                mos,
+                                "\u3010A\u6863\u3011\u52a0\u4ed320%|\u4eca\u5f00x0.92(-8%)",
+                            ):
+                                legs[2] = True
+                elif bracket == "B":
+                    o_b = C.open_px.get(stock)
+                    if o_b is not None and o_b > 0:
+                        if not legs[1] and price_now <= o_b * 0.95:
+                            if _apply_buy_leg(
+                                C,
+                                stock,
+                                notional * 0.30,
+                                price_now,
+                                dt_full,
+                                d_str,
+                                mos,
+                                "\u3010B\u6863\u3011\u52a0\u4ed330%|\u4eca\u5f00x0.95(-5%)",
+                            ):
+                                legs[1] = True
+                        if not legs[2] and price_now <= o_b * 0.92:
+                            if _apply_buy_leg(
+                                C,
+                                stock,
+                                notional * 0.20,
+                                price_now,
+                                dt_full,
+                                d_str,
+                                mos,
+                                "\u3010B\u6863\u3011\u52a0\u4ed320%|\u4eca\u5f00x0.92(-8%)",
+                            ):
+                                legs[2] = True
+                elif bracket == "C":
+                    o_c = C.open_px.get(stock)
+                    if o_c is not None and o_c > 0:
+                        if not legs[1] and price_now <= o_c * 0.91:
+                            if _apply_buy_leg(
+                                C,
+                                stock,
+                                notional * 0.30,
+                                price_now,
+                                dt_full,
+                                d_str,
+                                mos,
+                                "\u3010C\u6863\u3011\u52a0\u4ed330%|\u4eca\u5f00x0.91(-9%)",
+                            ):
+                                legs[1] = True
+                        if not legs[2] and price_now <= o_c * 0.88:
+                            if _apply_buy_leg(
+                                C,
+                                stock,
+                                notional * 0.20,
+                                price_now,
+                                dt_full,
+                                d_str,
+                                mos,
+                                "\u3010C\u6863\u3011\u52a0\u4ed320%|\u4eca\u5f00x0.88(-12%)",
+                            ):
+                                legs[2] = True
                 C.leg_done[stock] = legs
+                return
+
+            if not (_in_session_trade(hhmmss) or _a_preopen_for_first_buy_bt(C, hhmmss)):
                 return
 
             if not pool:
@@ -765,6 +821,9 @@ def handlebar(C):
             C.open_px[stock] = o_today
             C.prev_close_ref[stock] = prev_c
             C.gap_bracket[stock] = br
+
+            if _a_preopen_for_first_buy_bt(C, hhmmss) and (not _in_session_trade(hhmmss)) and br != "A":
+                return
 
             price_now = None
             try:
@@ -804,7 +863,9 @@ def handlebar(C):
                 return
 
             if br == "A":
-                if hhmmss is None or not (93000 <= hhmmss <= 93559):
+                a0 = int(_cfg(C, "a_first_buy_start_hhmmss"))
+                a1 = int(_cfg(C, "a_first_buy_end_hhmmss"))
+                if hhmmss is None or not (a0 <= hhmmss <= a1):
                     return
                 if _apply_buy_leg(
                     C,
@@ -814,7 +875,7 @@ def handlebar(C):
                     dt_full,
                     d_str,
                     mos,
-                    "\u3010A\u6863\u3011\u9996\u4e7050%|0930-0935",
+                    "\u3010A\u6863\u3011\u9996\u4e7050%|%06d-%06d" % (a0, a1),
                 ):
                     legs[0] = True
                     C.anchor_buy[stock] = price_now
