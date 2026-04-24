@@ -1255,9 +1255,27 @@ def _live_px_max_for_atr(C, stock, dt_full, tick_map, base_px, account_last=None
 	return max(vals)
 
 
-def _sse_ma_state(C, dt_full):
-	"""\u8fd4\u56de (\u4e0a\u8bc1\u6700\u65b0\u65e5\u6536, MA5, MA10, \u5141\u8bb8\u5f00\u65b0\u4ed3, \u662f\u5426\u6e05\u5168\u4ed3)\u3002
-	\u5141\u8bb8\u5f00\u65b0\u4ed3 = \u6700\u65b0\u65e5\u6536 >= MA5\uff08\u5927\u76d8\u5728 MA5 \u4e0a\u65b9\u6216\u7b49\u4ef7\uff09\uff1b\u53cd\u4e4b\u89c6\u4e3a\u7834\u4f4d MA5 \u5173\u95e8\u63a7\u3002"""
+def _sse_t1_close_index(closes, data_d, d_str):
+	"""\u4e0a\u8bc1\u65e5\u7ebf\u4e2d T-1 \u5b8c\u6210\u65e5\u6536\u7684\u7d22\u5f15\uff08\u5347\u5e8f closes\uff09\u3002\u82e5\u6700\u540e\u4e00\u6839\u4e3a\u5f53\u65e5 d_str\uff08\u672a\u6536\u76d8\uff09\u5219 T-1 \u4e3a\u5012\u6570\u7b2c\u4e8c\u6839\u3002"""
+	n = len(closes)
+	if n < 2 or not d_str:
+		return None
+	ld = _daily_last_bar_date(data_d, INDEX_SSE, closes)
+	if ld:
+		try:
+			if int(ld) == int(d_str):
+				return n - 2
+		except Exception:
+			pass
+	return n - 1
+
+
+def _sse_ma_state(C, dt_full, d_str=None, hhmmss=None):
+	"""\u8fd4\u56de (\u4e0a\u8bc1 T-1 \u6536, T-1 \u65e5\u7ebf MA5, \u6700\u65b0\u65e5\u7ebf MA10, \u5141\u8bb8\u5f00\u65b0\u4ed3, \u662f\u5426\u6e05\u5168\u4ed3)\u3002
+	\u5141\u8bb8\u5f00\u65b0\u4ed3\uff1a T-1 \u6536 >= T-1 \u7684 MA5\uff08\u4e0d\u542b\u5f53\u65e5\u672a\u5b8c\u6210 K\uff09\u3002\u9996\u6b21 bar \u65f6\u523b >= sse_ma5_gate_latch_hhmmss\uff08\u9ed8\u8ba4 93000\uff09\u65f6\u5c06\u8be5\u7ed3\u679c\u51bb\u7ed3\u81f3\u6362\u65e5\uff08\u76d8\u4e2d\u4e0d\u518d\u91cd\u7b97\u95e8\u63a7\uff09\u3002
+	\u6e05\u5168\u4ed3\uff1a\u4ecd\u7528\u6700\u65b0\u4e00\u6839\u65e5\u7ebf\u6536 vs \u5176 MA10\uff08\u53ef\u542b\u5f53\u65e5\u672a\u5b8c\u6210 K\uff0c\u4e0e\u539f\u903b\u8f91\u4e00\u81f4\uff09\u3002"""
+	if d_str is None and dt_full and len(str(dt_full)) >= 8:
+		d_str = str(dt_full)[:8]
 	n = max(int(g.ma_index_period_long), 15)
 	try:
 		data_d = C.get_market_data_ex(
@@ -1271,12 +1289,36 @@ def _sse_ma_state(C, dt_full):
 			return None, None, None, True, False
 		cl0 = list(closes)
 		_, _, closes = _align_daily_ohlc_chronological(data_d, INDEX_SSE, cl0, list(cl0), list(cl0), None)
-		last = float(closes[-1])
+		last_raw = float(closes[-1])
 		p5, p10 = int(g.ma_index_period_short), int(g.ma_index_period_long)
-		ma5 = sum(float(x) for x in closes[-p5:]) / float(p5)
 		ma10 = sum(float(x) for x in closes[-p10:]) / float(p10)
-		allow_new = bool(last >= ma5)
-		return last, ma5, ma10, allow_new, (last < ma10)
+		index_liquidate_all = bool(last_raw < ma10)
+		i1 = _sse_t1_close_index(closes, data_d, d_str)
+		if i1 is None or i1 < p5 - 1:
+			t1_close = t1_ma5 = None
+			t1_allow = True
+		else:
+			t1_close = float(closes[i1])
+			t1_ma5 = sum(float(closes[i1 - p5 + 1:i1 + 1])) / float(p5)
+			t1_allow = bool(t1_close >= t1_ma5)
+		latch_h = int(getattr(g, 'sse_ma5_gate_latch_hhmmss', 93000))
+		if hhmmss is None:
+			allow_new = bool(t1_allow)
+		else:
+			try:
+				hv = int(hhmmss)
+			except Exception:
+				hv = 0
+			if (not getattr(g, '_sse_ma5_gate_latched', False)) and hv >= latch_h:
+				g._sse_ma5_gate_latched = True
+				g._sse_ma5_gate_frozen_allow = bool(t1_allow)
+			if getattr(g, '_sse_ma5_gate_latched', False):
+				allow_new = bool(getattr(g, '_sse_ma5_gate_frozen_allow', t1_allow))
+			else:
+				allow_new = bool(t1_allow)
+		if t1_close is None:
+			return None, None, ma10, allow_new, index_liquidate_all
+		return t1_close, t1_ma5, ma10, allow_new, index_liquidate_all
 	except Exception:
 		return None, None, None, True, False
 
@@ -1740,6 +1782,8 @@ def init(C):
 	g.require_sse_above_ma5_for_new = bool(getattr(C, 'require_sse_above_ma5_for_new', True))
 	g.ma_index_period_short = int(getattr(C, 'ma_index_period_short', 5))
 	g.ma_index_period_long = int(getattr(C, 'ma_index_period_long', 10))
+	# \u4e0a\u8bc1 MA5 \u5f00\u65b0\u95e8\u63a7\uff1a\u9996\u6b21 bar \u65f6\u523b >= \u6b64\u503c\u65f6\u51bb\u7ed3\u5f53\u65e5 T-1 vs MA5 \u5224\u65ad\uff08\u9ed8\u8ba4 93000=\u8fde\u7eed\u7ade\u4ef7\u5f00\u76d8\uff09
+	g.sse_ma5_gate_latch_hhmmss = int(getattr(C, 'sse_ma5_gate_latch_hhmmss', 93000))
 	g.atr_period = int(getattr(C, 'atr_period', 14))
 	# \u5168\u5e02\u573a\u903b\u8f91\u9ed8\u8ba4\u4ece 09:25 (92500) \u8d77\u7b97\uff08\u4e0e\u96c6\u5408\u7ade\u4ef7\u636e\u5408\u540e\u5bf9\u9f50\uff09
 	g.session_gate_start_hhmmss = int(getattr(C, 'session_gate_start_hhmmss', 92500))
@@ -1822,6 +1866,8 @@ def init(C):
 	g._last_handlebar_barpos = None
 	g._warned_no_account = False
 	g._ma10_signal_latched = False
+	g._sse_ma5_gate_latched = False
+	g._sse_ma5_gate_frozen_allow = None
 	g._trade_day = ''
 	g._opc_day = ''
 	g._opc_map = {}
@@ -1840,8 +1886,9 @@ def init(C):
 	g._same_day_sold_canon = set()
 
 	print('=' * 60)
-	print('%s \u521d\u59cb\u5316 accid=%s \u677f\u5757=%s \u5355\u7968\u9884\u7b97=%.0f MA5\u95e8\u63a7\u5f00\u65b0=%s live_orders=%s quick_trade=%d \u7b56\u7565\u540d=%s'
+	print('%s \u521d\u59cb\u5316 accid=%s \u677f\u5757=%s \u5355\u7968\u9884\u7b97=%.0f MA5\u95e8\u63a7(T-1/\u51bb\u7ed3>=%06d)=%s live_orders=%s quick_trade=%d \u7b56\u7565\u540d=%s'
 	      % (STRATEGY_TAG, g.accid, g.watchlist_sector_name, g.per_stock_amount,
+	         int(getattr(g, 'sse_ma5_gate_latch_hhmmss', 93000)),
 	         getattr(g, 'require_sse_above_ma5_for_new', True), g.live_orders, g.quick_trade, g.strategy_order_name))
 	print('manual_hold_days_csv=%s csv=%r resolve=%s rows=%d err=%r env=MANUAL_OPEN_DATE_CSV'
 	      % (getattr(g, 'use_manual_hold_days_csv', True), getattr(g, 'open_date_csv_path', ''),
@@ -2670,6 +2717,8 @@ def handlebar(C):
 			print('%s [roll_day] %r' % (STRATEGY_TAG, e))
 		g._trade_day = d_str
 		g._ma10_signal_latched = False
+		g._sse_ma5_gate_latched = False
+		g._sse_ma5_gate_frozen_allow = None
 		g._tail_last_minute_log = {}
 		g._atr_last_minute_log = {}
 		g._hold_days_dbg_marker = {}
@@ -2744,7 +2793,7 @@ def handlebar(C):
 		print('%s [sell_unfilled_retry] %r' % (STRATEGY_TAG, e))
 
 	try:
-		idx_close, idx_ma5, idx_ma10, index_allow_new, index_liquidate_all = _sse_ma_state(C, dt_full)
+		idx_close, idx_ma5, idx_ma10, index_allow_new, index_liquidate_all = _sse_ma_state(C, dt_full, d_str, hhmmss)
 	except Exception as e:
 		print('%s [sse_ma_state] %r' % (STRATEGY_TAG, e))
 		idx_close = idx_ma5 = idx_ma10 = None
@@ -2753,7 +2802,7 @@ def handlebar(C):
 	if not bool(getattr(g, 'require_sse_above_ma5_for_new', True)):
 		index_allow_new = True
 	if _vb() and idx_close is not None:
-		print('%s \u4e0a\u8bc1 \u6536=%.2f MA5=%.2f MA10=%.2f \u5f00\u65b0\u95e8\u63a7=%s \u6e05\u5168MA10=%s'
+		print('%s \u4e0a\u8bc1 T-1\u6536=%.2f T-1MA5=%.2f MA10=%.2f \u5f00\u65b0\u95e8\u63a7=%s \u6e05\u5168MA10=%s'
 		      % (d_str, idx_close, idx_ma5 or 0, idx_ma10 or 0, index_allow_new, index_liquidate_all))
 
 	try:
