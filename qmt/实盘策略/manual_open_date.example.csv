@@ -1,0 +1,4 @@
+# code,open_date
+# Col1: 000001.SZ or 000001; Col2: YYYYMMDD
+# In QMT set: ContextInfo.open_date_csv_path = r'C:\path\to\your_open_date.csv'
+001330.SZ,20260419
