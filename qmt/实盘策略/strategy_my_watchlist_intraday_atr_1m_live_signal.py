@@ -691,7 +691,7 @@ def _per_stock_watch_hint(C, stock, dt_full, d_str, hhmmss, tick_map, already, i
 	if not (_in_session_trade(hhmmss) or _a_preopen_for_first_buy(hhmmss)):
 		return '\u975e\u4ea4\u6613\u53ef\u64cd\u4f5c\u65f6\u6bb5'
 	if not index_allow_new:
-		return '\u6307\u6570MA5\u4e0b(\u672c\u7968\u4ec5\u76d1\u63a7)'
+		return '\u4e0a\u8bc1T-1\u6536<T-1MA5(\u672c\u7968\u4ec5\u76d1\u63a7)'
 	if stock in already:
 		return '\u5df2\u6301\u4ed3'
 	if opc is not None:
@@ -1416,30 +1416,38 @@ def _daily_hh_peak_since_open(data_d, stock, highs, open_yyyymmdd, dh_cal_fallba
 
 
 def _atr_dynamic_mult(dh_cal):
-	"""\u52a8\u6001\u500d\u6570 = \u521d\u59cb * (\u534a\u8870\u671f / \u6301\u4ed3\u65e5\u5386\u5929\u6570)\uff1b\u6301\u4ed3\u4e45\u5219\u500d\u6570\u8d8b\u5c0f\uff08\u518d clamp\uff09\u3002
-	\u5728 dh==half_life \u5904 raw==init\uff1b\u5929\u6570\u66f4\u77ed\u5219\u66f4\u5927\uff08\u6613\u89e6\u9876\uff09\uff0c\u66f4\u957f\u5219\u66f4\u5c0f\uff08\u8d8b\u7d27\uff09\u3002"""
-	h = float(getattr(g, 'atr_stop_half_life_days', 20.0))
+	"""\u52a8\u6001\u500d\u6570\u5728 [max,min] \u533a\u95f4\u5e73\u6ed1\u6536\u655b\uff0c\u907f\u514d\u957f\u671f\u88ab\u4e0a\u9650\u5361\u6b7b\u3002
+	\u9ed8\u8ba4\u5728 half_life \u5929\u5185\u7531\u8d77\u70b9\u8870\u51cf\u5230\u4e0b\u9650\uff1am = start - (start-lo) * ratio\u3002"""
+	h = float(getattr(g, 'atr_stop_half_life_days', 10.0))
 	if h <= 1e-6:
-		h = 20.0
-	init = float(getattr(g, 'atr_stop_mult_initial', 2.5))
+		h = 10.0
 	dh = max(1, int(dh_cal))
-	raw = init * (h / float(dh))
-	lo = float(getattr(g, 'atr_stop_mult_min', 0.85))
-	hi = float(getattr(g, 'atr_stop_mult_max', 2.0))
-	return max(lo, min(hi, raw))
+	lo = float(getattr(g, 'atr_stop_mult_min', 1.0))
+	hi = float(getattr(g, 'atr_stop_mult_max', 3.0))
+	if hi < lo:
+		lo, hi = hi, lo
+	init = float(getattr(g, 'atr_stop_mult_initial', hi))
+	start = max(lo, min(hi, init))
+	ratio = min(1.0, max(0.0, float(dh - 1) / float(h)))
+	m = start - (start - lo) * ratio
+	return max(lo, min(hi, m))
 
 
 def _atr_profit_lock_floor_price(avg_cost, dh_cal, cur_px):
-	"""\u76c8\u5229\u4fdd\u62a4\u5e95\u7ebf\uff1a\u6301\u4ed3\u5929\u6570>=atr_lock_floor_min_days \u4e14\u6d6e\u76c8>atr_lock_min_profit_dec\u65f6\u751f\u6548\u3002"""
+	"""\u76c8\u5229\u4fdd\u62a4\u5e95\u7ebf\uff1a\u6301\u4ed3\u5929\u6570>=atr_lock_floor_min_days \u4e14\u6d6e\u76c8>=atr_lock_min_profit_dec\u65f6\u751f\u6548\u3002"""
 	if avg_cost is None or float(avg_cost) <= 0 or cur_px is None or float(cur_px) <= 0:
 		return None
-	need_d = int(getattr(g, 'atr_lock_floor_min_days', 10))
+	need_d = int(getattr(g, 'atr_lock_floor_min_days', 7))
 	if int(dh_cal) < need_d:
 		return None
 	pf = float(cur_px) / float(avg_cost) - 1.0
-	if pf <= float(getattr(g, 'atr_lock_min_profit_dec', 0.15)):
+	thr_pf = float(getattr(g, 'atr_lock_min_profit_dec', 0.15))
+	if pf < thr_pf:
 		return None
-	lock_ratio = min(0.8, 0.3 + float(dh_cal) / 100.0)
+	base = float(getattr(g, 'atr_lock_ratio_base', 0.60))
+	slope = float(getattr(g, 'atr_lock_ratio_slope', 0.025))
+	cap = float(getattr(g, 'atr_lock_ratio_cap', 0.97))
+	lock_ratio = min(cap, base + float(dh_cal) * slope)
 	min_profit = pf * lock_ratio
 	return float(avg_cost) * (1.0 + min_profit)
 
@@ -1549,7 +1557,7 @@ def _emit_atr_mon_line(dt_full, st, px, avg_c, dh_eff, highs, lows, closes, hold
 	except (TypeError, ValueError):
 		px_show = px_atr
 	if avg_c is None or float(avg_c) <= 0:
-		print('[ATR-MON] \u8303\u56f4=%s|\u65f6\u95f4=%s|\u4ee3\u7801=%s|\u80a1=%d|\u6d6e\u76c8\u4e8f%%=--|\u73b0=%.3f|\u6210\u672c=--|\u6b62\u76c8\u7ebf=--|\u8ddd\u7ebf=--|\u8ddd\u7ebf%%=--|ATR=--|HH=--|\u8d85\u7ebfATR=--|\u76c8ATR\u500d=--|\u672c\u6839\u89e6\u53d1=--|\u5907\u6ce8=\u6210\u672c\u7f3a'
+		print('[ATR-MON] \u8303\u56f4=%s|\u65f6\u95f4=%s|\u4ee3\u7801=%s|\u80a1=%d|\u6d6e\u76c8\u4e8f%%=--|\u73b0=%.3f|\u6210\u672c=--|\u6b62\u76c8\u7ebf=--|\u4fdd\u5e95\u7ebf=--|\u8ddd\u7ebf=--|\u8ddd\u7ebf%%=--|ATR=--|HH=--|\u8d85\u7ebfATR=--|\u76c8ATR\u500d=--|\u672c\u6839\u89e6\u53d1=--|\u5907\u6ce8=\u6210\u672c\u7f3a'
 		      % (sc, dt_full, st, sh, px_show))
 		return
 	ac = float(avg_c)
@@ -1562,8 +1570,9 @@ def _emit_atr_mon_line(dt_full, st, px, avg_c, dh_eff, highs, lows, closes, hold
 		stop, atr_v, highest_high, err, hh_bar = _atr_trailing_stop_numbers(dh_eff, highs, lows, closes, ref_high=ref_high)
 	if err is not None:
 		em = {'talib': 'talib', 'bar': 'K\u7ebf', 'hold': '\u6301\u4ed31\u65e5', 'hh': 'HH', 'atr_x': 'ATR\u7b97', 'atr0': 'ATR\u65e0\u6548'}.get(err, err)
-		print('[ATR-MON] \u8303\u56f4=%s|\u65f6\u95f4=%s|\u4ee3\u7801=%s|\u80a1=%d|\u6d6e\u76c8\u4e8f%%=%+.2f%%|\u73b0=%.3f|\u6210\u672c=%.3f|\u6b62\u76c8\u7ebf=--|\u8ddd\u7ebf=--|\u8ddd\u7ebf%%=--|ATR=--|HH=--|\u8d85\u7ebfATR=--|\u76c8ATR\u500d=--|\u672c\u6839\u89e6\u53d1=--|\u5907\u6ce8=%s'
-		      % (sc, dt_full, st, sh, pnl_pct, px_show, ac, em))
+		print('[ATR-MON] \u8303\u56f4=%s|\u65f6\u95f4=%s|\u4ee3\u7801=%s|\u80a1=%d|\u6d6e\u76c8\u4e8f%%=%+.2f%%|\u73b0=%.3f|\u6210\u672c=%.3f|\u6b62\u76c8\u7ebf=--|\u4fdd\u5e95\u7ebf=%s|\u8ddd\u7ebf=--|\u8ddd\u7ebf%%=--|ATR=--|HH=--|\u8d85\u7ebfATR=--|\u76c8ATR\u500d=--|\u672c\u6839\u89e6\u53d1=--|\u5907\u6ce8=%s'
+		      % (sc, dt_full, st, sh, pnl_pct, px_show, ac,
+		         ('%.3f' % float(stop_floor)) if (stop_floor is not None and float(stop_floor) > 0) else '--', em))
 		return
 	gap = px_atr - stop
 	gap_pct = (gap / stop * 100.0) if stop is not None and stop > 0 else 0.0
@@ -1587,7 +1596,7 @@ def _emit_atr_mon_line(dt_full, st, px, avg_c, dh_eff, highs, lows, closes, hold
 	if hh_bar is not None and highest_high is not None and float(highest_high) > float(hh_bar) + 1e-6:
 		note = (note + '|\u65e5\u7ebfHH=%.3f\u2192\u6709\u6548HH=%.3f' % (float(hh_bar), float(highest_high)))[:120]
 	if mult is not None:
-		note = (note + '|m=%.2f' % float(mult))[:120]
+		note = (note + '|m=%.3f' % float(mult))[:120]
 	if dh_cal is not None:
 		note = (note + '|dh=%d' % int(dh_cal))[:120]
 	if stop_floor is not None:
@@ -1595,9 +1604,11 @@ def _emit_atr_mon_line(dt_full, st, px, avg_c, dh_eff, highs, lows, closes, hold
 			note = (note + '|floor=%.3f' % float(stop_floor))[:120]
 		except Exception:
 			pass
-	print('[ATR-MON] \u8303\u56f4=%s|\u65f6\u95f4=%s|\u4ee3\u7801=%s|\u80a1=%d|\u6d6e\u76c8\u4e8f%%=%+.2f%%|\u73b0=%.3f|\u6210\u672c=%.3f|\u6b62\u76c8\u7ebf=%.3f|\u8ddd\u7ebf=%.3f|\u8ddd\u7ebf%%=%.2f%%|ATR=%.4f|HH=%.3f|\u8d85\u7ebfATR=%s|\u76c8ATR\u500d=%s|\u672c\u6839\u89e6\u53d1=%s|\u5907\u6ce8=%s'
-	      % (sc, dt_full, st, sh, pnl_pct, px_show, ac, stop, gap, gap_pct,
-	         atr_v if atr_v is not None else 0.0,
+	print('[ATR-MON] \u8303\u56f4=%s|\u65f6\u95f4=%s|\u4ee3\u7801=%s|\u80a1=%d|\u6d6e\u76c8\u4e8f%%=%+.2f%%|\u73b0=%.3f|\u6210\u672c=%.3f|\u6b62\u76c8\u7ebf=%.3f|\u4fdd\u5e95\u7ebf=%s|\u8ddd\u7ebf=%.3f|\u8ddd\u7ebf%%=%.2f%%|ATR=%.4f|\u6301\u4ed3HH=%s|\u6709\u6548HH=%.3f|\u8d85\u7ebfATR=%s|\u76c8ATR\u500d=%s|\u672c\u6839\u89e6\u53d1=%s|\u5907\u6ce8=%s'
+	      % (sc, dt_full, st, sh, pnl_pct, px_show, ac, stop,
+	         ('%.3f' % float(stop_floor)) if (stop_floor is not None and float(stop_floor) > 0) else '--',
+	         gap, gap_pct, atr_v if atr_v is not None else 0.0,
+	         ('%.3f' % float(hh_bar)) if (hh_bar is not None and float(hh_bar) > 0) else '--',
 	         highest_high if highest_high is not None else 0.0,
 	         ('%.2f' % buf_atr) if buf_atr is not None else '--',
 	         ('%.2f' % profit_atr) if profit_atr is not None else '--',
@@ -1624,7 +1635,7 @@ def _check_atr_take_profit_only(days_held_effective, highs, lows, closes, curren
 	if stop is None:
 		return False, 'ATR\u65e0\u6548'
 	if current_close <= stop:
-		m_s = (' m=%.2f' % float(mult)) if mult is not None else ''
+		m_s = (' m=%.3f' % float(mult)) if mult is not None else ''
 		f_s = (' floor=%.3f' % float(stop_floor)) if stop_floor is not None else ''
 		return True, ('ATR\u6b62\u76c8 \u7ebf=%.3f' % stop) + m_s + f_s
 	return False, 'ATR\u672a\u89e6\u53d1'
@@ -1694,7 +1705,7 @@ def _emit_atr_non_watchlist_account_positions(C, dt_full, d_str, tick_map, wl):
 			else:
 				dh_eff = max(1, dh)
 			m_atr, fl_atr, hh_ov, ref_h, dh_cal = _atr_pack_for_position(
-				C, st, dt_full, d_str, data_d, highs, lows, closes, px, avg_c, dh_eff)
+				C, st, dt_full, d_str, data_d, highs, lows, closes, px_live, avg_c, dh_eff)
 			_emit_atr_mon_line(dt_full, st, px, avg_c, dh_eff, highs, lows, closes,
 				   hold_shares=vol, scope_tag='\u975e\u81ea\u9009', ref_high=ref_h,
 				   mult=m_atr, stop_floor=fl_atr, hh_daily_override=hh_ov, dh_cal=dh_cal,
@@ -1794,11 +1805,18 @@ def init(C):
 		_atr_ini = getattr(C, 'atr_stop_mult', 2.5)
 	g.atr_stop_mult_initial = float(_atr_ini)
 	g.atr_stop_mult = float(_atr_ini)
-	g.atr_stop_half_life_days = float(getattr(C, 'atr_stop_half_life_days', 20.0))
-	g.atr_stop_mult_min = float(getattr(C, 'atr_stop_mult_min', 0.85))
-	g.atr_stop_mult_max = float(getattr(C, 'atr_stop_mult_max', 2.0))
-	g.atr_lock_floor_min_days = int(getattr(C, 'atr_lock_floor_min_days', 10))
+	g.atr_stop_half_life_days = float(getattr(C, 'atr_stop_half_life_days', 10.0))
+	g.atr_stop_mult_min = float(getattr(C, 'atr_stop_mult_min', 1.0))
+	g.atr_stop_mult_max = float(getattr(C, 'atr_stop_mult_max', 3.0))
+	_lo, _hi = float(g.atr_stop_mult_min), float(g.atr_stop_mult_max)
+	if _hi < _lo:
+		_lo, _hi = _hi, _lo
+	g._atr_start_eff = max(_lo, min(_hi, float(g.atr_stop_mult_initial)))
+	g.atr_lock_floor_min_days = int(getattr(C, 'atr_lock_floor_min_days', 7))
 	g.atr_lock_min_profit_dec = float(getattr(C, 'atr_lock_min_profit_dec', 0.15))
+	g.atr_lock_ratio_base = float(getattr(C, 'atr_lock_ratio_base', 0.60))
+	g.atr_lock_ratio_slope = float(getattr(C, 'atr_lock_ratio_slope', 0.025))
+	g.atr_lock_ratio_cap = float(getattr(C, 'atr_lock_ratio_cap', 0.97))
 	g.atr_ref_high_use_intraday = bool(getattr(C, 'atr_ref_high_use_intraday', True))
 	g.bar_count = int(getattr(C, 'bar_count', 80))
 	g.verbose_log = bool(getattr(C, 'verbose_log', True))
@@ -1810,9 +1828,13 @@ def init(C):
 	g.intraday_touch_pct = float(getattr(C, 'intraday_touch_pct', -0.09))
 	g.intraday_fail_recover_pct = float(getattr(C, 'intraday_fail_recover_pct', -0.06))
 	g.tail_clear_start_hhmmss = int(getattr(C, 'tail_clear_start_hhmmss', 145000))
+	# \u5c3e\u76d8\u76d1\u63a7\uff1a\u73b0\u4ef7<\u5f53\u524d MA5\uff08\u4e0e\u5c3e\u76d8\u6210\u672c\u6b62\u635f\u540c\u4e00\u65f6\u6bb5 tail_clear_start_hhmmss\uff09
+	g.tail_sell_below_ma5 = bool(getattr(C, 'tail_sell_below_ma5', True))
+	g.tail_ma5_period = max(2, int(getattr(C, 'tail_ma5_period', 5)))
 	g.non_atr_sell_start_hhmmss = int(getattr(C, 'non_atr_sell_start_hhmmss', 145400))
 	g.sell_unfilled_timeout_sec = float(getattr(C, 'sell_unfilled_timeout_sec', 60))
-	g.sell_unfilled_max_retry = int(getattr(C, 'sell_unfilled_max_retry', 0))
+	# 卖出必须成交：失败后持续撤单重挂，不设重试上限
+	g.sell_unfilled_max_retry = 0
 	g.tail_intraday_log = bool(getattr(C, 'tail_intraday_log', True))
 	g.atr_intraday_log = bool(getattr(C, 'atr_intraday_log', True))
 	g.atr_log_account_non_watchlist = bool(getattr(C, 'atr_log_account_non_watchlist', True))
@@ -1894,14 +1916,17 @@ def init(C):
 	      % (getattr(g, 'use_manual_hold_days_csv', True), getattr(g, 'open_date_csv_path', ''),
 	         getattr(g, '_manual_hold_csv_resolve', ''),
 	         len(getattr(g, '_manual_open_dates', {}) or {}), getattr(g, '_manual_csv_load_err', '')))
-	print('atr_tp: init_mult=%.2f half_life=%.1fd mult_clamp=[%.2f,%.2f] lock_days>=%d lock_profit>=%.1f%% atr_period=%d'
-	      % (g.atr_stop_mult_initial, g.atr_stop_half_life_days, g.atr_stop_mult_min, g.atr_stop_mult_max,
-	         g.atr_lock_floor_min_days, g.atr_lock_min_profit_dec * 100.0, g.atr_period))
+	print('atr_tp: init_mult=%.2f start_eff@dh1=%.3f half_life=%.1fd mult_clamp=[%.2f,%.2f] lock_days>=%d lock_profit>=%.1f%% lock_ratio=base%.2f+slope%.3f*dh cap%.2f atr_period=%d'
+	      % (g.atr_stop_mult_initial, float(getattr(g, '_atr_start_eff', g.atr_stop_mult_initial)), g.atr_stop_half_life_days, g.atr_stop_mult_min, g.atr_stop_mult_max,
+	         g.atr_lock_floor_min_days, g.atr_lock_min_profit_dec * 100.0,
+	         g.atr_lock_ratio_base, g.atr_lock_ratio_slope, g.atr_lock_ratio_cap, g.atr_period))
+	if float(getattr(g, '_atr_start_eff', 2.0)) <= 1.01:
+		print('\u26a0\ufe0f ATR: start_eff<=1.01 \u2192 \u65e5\u5fd7\u4e2d m \u5e38\u663e\u793a\u4e3a ~1.0\uff1b\u82e5\u5e0c\u671b\u5bbd\u4e0a\u9650 \u8bf7\u68c0\u67e5 QMT: atr_stop_mult/atr_stop_mult_initial \u4e0d\u8981\u4e3a1\uff0c\u9ed8\u8ba4 mult_clamp \u4e0a\u4e0b\u9650 1~3\uff0c\u534a\u8870\u671f 10d')
 	print('\u56de\u6d4b\u4e0d\u4e0b\u5355\uff1b\u5b9e\u76d8 passorder \u4e70=%d \u5356=%d' % (g.buy_code, g.sell_code))
 	print('signal_trace_log=%s minute_summary_log=%s position_summary_log=%s sell_monitor_summary_log=%s monitor_account_risk_sells=%s block_same_day_rebuy_after_sell=%s auto_remove_sold_from_watchlist=%s'
 	      % (g.signal_trace_log, g.minute_summary_log, g.position_summary_log, g.sell_monitor_summary_log, g.monitor_account_risk_sells, getattr(g, 'block_same_day_rebuy_after_sell', True), getattr(g, 'auto_remove_sold_from_watchlist', False)))
-	print('non_atr_sell_start_hhmmss=%d tail_clear_start=%06d tail_cost_stop_pct=%.4f sell_unfilled=%.0fs max_retry=%s tail_intraday_log=%s atr_intraday_log=%s atr_log_non_wl=%s'
-	      % (g.non_atr_sell_start_hhmmss, int(g.tail_clear_start_hhmmss), float(g.tail_cost_stop_pct), float(g.sell_unfilled_timeout_sec),
+	print('non_atr_sell_start_hhmmss=%d tail_clear_start=%06d tail_below_ma5=%s tail_ma5_period=%d tail_cost_stop_pct=%.4f sell_unfilled=%.0fs max_retry=%s tail_intraday_log=%s atr_intraday_log=%s atr_log_non_wl=%s'
+	      % (g.non_atr_sell_start_hhmmss, int(g.tail_clear_start_hhmmss), getattr(g, 'tail_sell_below_ma5', True), int(getattr(g, 'tail_ma5_period', 5)), float(g.tail_cost_stop_pct), float(g.sell_unfilled_timeout_sec),
 	         ('\u65e0\u9650' if int(g.sell_unfilled_max_retry) <= 0 else int(g.sell_unfilled_max_retry)),
 	         g.tail_intraday_log, g.atr_intraday_log,
 	         getattr(g, 'atr_log_account_non_watchlist', True)))
@@ -2159,6 +2184,11 @@ def _passorder_go(C, op_code, stock, volume, user_note):
 
 
 def _signal_buy_leg(C, stock, cash_yuan, price_now, dt_full, d_str, mos, tag, tick_map):
+	can = _canonical_stock_code(stock) or stock
+	if bool(getattr(g, 'block_same_day_rebuy_after_sell', True)) and can in getattr(g, '_same_day_sold_canon', set()):
+		_trace(dt_full, '当日已卖不再买入 stock=%s tag=%s' % (stock, tag))
+		_mr_set('当日已卖不回补 %s' % stock, 0, price_now)
+		return False
 	sh = _shares_for_cash(cash_yuan, price_now, mos)
 	if sh < mos:
 		_mr_set('\u4e70\u4fe1\u53f7\u80a1\u6570\u4e0d\u8db3\u6700\u5c0f\u624b %s' % tag, 0, price_now)
@@ -2220,6 +2250,42 @@ def _sell_refresh_shares(stock, mos):
 	return 0
 
 
+def _fmt_sell_rule(rule_bucket, rule_key, detail=''):
+	"""\u7edf\u4e00\u5356\u51fa\u539f\u56e0\uff08\u4f9b [SELL]/[ORDER]/[SELL-OK] \u4e0e\u59d4\u6258\u5907\u6ce8\u8bfb\u53d6\uff09\u3002
+	rule_bucket: \u6307\u6570 / \u98ce\u63a7 / \u5c3e\u76d8 / \u6b62\u76c8
+	rule_key: \u77ed\u6807\u7b7e\uff1a\u4e0a\u8bc1MA10\u3001\u786c\u6b62\u635f\u3001\u6628\u6536\u6b62\u635f\u3001ATR\u540a\u706f\u3001\u5c3e\u76d8\u6210\u672c\u3001\u7834\u5747\u7ebf\u7b49"""
+	b = (rule_bucket or '').strip() or '\u5176\u4ed6'
+	k = (rule_key or '').strip() or '\u672a\u77e5'
+	d = str(detail).strip() if detail is not None else ''
+	if '|' in d:
+		d = d.replace('|', ';')
+	out = '\u89c4\u5219\u7c7b=%s|\u89c4\u5219\u9879=%s' % (b, k)
+	if d:
+		out += '|\u8be6\u60c5=%s' % d
+	return out
+
+
+def _sell_rule_parts(reason):
+	"""\u4ece _fmt_sell_rule \u5b57\u7b26\u4e32\u89e3\u6790\u4e09\u5217\uff1b\u65e7\u683c\u5f0f\u65e0\u7ba1\u9053\u65f6\u5168\u90e8\u653e\u5165\u8be6\u60c5\u3002"""
+	s = str(reason or '').strip()
+	rb = rk = det = ''
+	for part in s.split('|'):
+		if '=' not in part:
+			continue
+		k, v = part.split('=', 1)
+		k = k.strip()
+		v = v.strip()
+		if k == '\u89c4\u5219\u7c7b':
+			rb = v
+		elif k == '\u89c4\u5219\u9879':
+			rk = v
+		elif k == '\u8be6\u60c5':
+			det = v
+	if not rb and not rk and not det and s:
+		det = s
+	return rb, rk, det
+
+
 def _emit_sell_fill_success(C, dt_full, stock, vol, px, avg_c, reason):
 	try:
 		v = int(vol)
@@ -2234,8 +2300,9 @@ def _emit_sell_fill_success(C, dt_full, stock, vol, px, avg_c, reason):
 	amt = float(v) * p
 	ps = ('%.2f%%' % pnl_pct) if pnl_pct is not None else '--'
 	ac_s = ('%.3f' % ac) if ac is not None else '--'
-	print('[SELL-OK] \u65f6\u95f4=%s|\u4ee3\u7801=%s|\u6210\u4ea4\u4ef7=%.3f|\u6210\u4ea4\u80a1\u6570=%d|\u6301\u4ed3\u6210\u672c=%s|\u76c8\u4e8f\u6bd4=%s|\u6210\u4ea4\u91d1\u989d\u2248%.0f|\u539f\u56e0=%s'
-	      % (dt_full, stock, p, v, ac_s, ps, amt, (reason or '')[:60]))
+	rb, rk, det = _sell_rule_parts(reason)
+	print('[SELL-OK] \u65f6\u95f4=%s|\u4ee3\u7801=%s|\u6210\u4ea4\u4ef7=%.3f|\u6210\u4ea4\u80a1\u6570=%d|\u6301\u4ed3\u6210\u672c=%s|\u76c8\u4e8f\u6bd4=%s|\u6210\u4ea4\u91d1\u989d\u2248%.0f|\u89c4\u5219\u7c7b=%s|\u89c4\u5219\u9879=%s|\u8be6\u60c5=%s'
+	      % (dt_full, stock, p, v, ac_s, ps, amt, rb or '--', rk or '--', (det or '--')[:100]))
 	try:
 		_try_remove_sold_stock_from_watchlist_sector(C, stock)
 	except Exception as e:
@@ -2261,7 +2328,6 @@ def _process_sell_unfilled_cancel_retry(C, dt_full, d_str, hhmmss, tick_map, wal
 		return
 	mos = int(g.min_order_shares)
 	timeout = float(getattr(g, 'sell_unfilled_timeout_sec', 60))
-	max_r = int(getattr(g, 'sell_unfilled_max_retry', 0))
 	ORDER_DONE = 56
 	ORDER_CANCEL_STATES = (53, 54, 57)
 	now_ts = time.time()
@@ -2274,6 +2340,34 @@ def _process_sell_unfilled_cancel_retry(C, dt_full, d_str, hhmmss, tick_map, wal
 	except Exception:
 		deals = []
 	cancel_fn = _cancel_fn()
+
+	def _repost_sell_after_fail(st, pinfo):
+		"""卖单未成后的统一重挂：持续重试直到成交或无可卖股数。"""
+		sh_new = _sell_refresh_shares(st, mos)
+		if sh_new < mos:
+			print('%s [卖重挂]无可卖数 %s' % (dt_full, st))
+			return
+		new_r = _compact_sell_order_remark(st)
+		cur_px = float(pinfo.get('px_quote', 0) or 0)
+		try:
+			cur = _get_current_price(C, st, dt_full, cur_px if cur_px > 0 else None, tick_map)
+			if cur is not None and float(cur) > 0:
+				cur_px = float(cur)
+		except Exception:
+			pass
+		if not _passorder_go(C, g.sell_code, st, sh_new, new_r):
+			print('%s [卖重挂]passorder失败 %s' % (dt_full, st))
+			return
+		pending[new_r] = {
+			't': time.time(),
+			'stock': st,
+			'sh': sh_new,
+			'px_quote': cur_px,
+			'reason': pinfo.get('reason', ''),
+			'avg_c': pinfo.get('avg_c'),
+			'retry': int(pinfo.get('retry', 0)) + 1,
+		}
+		print('%s [ORDER][卖重挂] %s %d股 retry=%d' % (dt_full, st, sh_new, pending[new_r]['retry']))
 
 	for remark in list(pending.keys()):
 		pinfo = pending.get(remark)
@@ -2311,6 +2405,7 @@ def _process_sell_unfilled_cancel_retry(C, dt_full, d_str, hhmmss, tick_map, wal
 			st_ord = int(getattr(om, 'm_nOrderStatus', 0) or 0)
 			if st_ord in ORDER_CANCEL_STATES:
 				pending.pop(remark, None)
+				_repost_sell_after_fail(st, pinfo)
 				continue
 			if st_ord == ORDER_DONE:
 				try:
@@ -2329,14 +2424,11 @@ def _process_sell_unfilled_cancel_retry(C, dt_full, d_str, hhmmss, tick_map, wal
 		elapsed = now_ts - float(pinfo.get('t', 0))
 		if elapsed < timeout:
 			continue
-		if max_r > 0 and int(pinfo.get('retry', 0)) >= max_r:
-			print('%s [\u5356\u5355\u8ddf\u8e2a]\u5230\u4e0a\u9650\u505c\u6b62\u91cd\u6302 %s' % (dt_full, st))
-			pending.pop(remark, None)
-			continue
 		if not om:
 			if elapsed > timeout * 3:
-				print('%s [\u5356\u5355\u8ddf\u8e2a]\u59d4\u6258\u672a\u540c\u6b65\u8d85\u65f6 %s' % (dt_full, st))
+				print('%s [\u5356\u5355\u8ddf\u8e2a]\u59d4\u6258\u672a\u540c\u6b65\u8d85\u65f6\uff0c\u76f4\u63a5\u91cd\u6302 %s' % (dt_full, st))
 				pending.pop(remark, None)
+				_repost_sell_after_fail(st, pinfo)
 			continue
 		if _auction_cancel_block_wall(wall_now_int):
 			continue
@@ -2349,31 +2441,7 @@ def _process_sell_unfilled_cancel_retry(C, dt_full, d_str, hhmmss, tick_map, wal
 			print('%s [\u5356\u5355\u64a4\u5355\u5931\u8d25] %s %r' % (STRATEGY_TAG, oid, e))
 			continue
 		pending.pop(remark, None)
-		sh_new = _sell_refresh_shares(st, mos)
-		if sh_new < mos:
-			print('%s [\u5356\u91cd\u6302]\u65e0\u53ef\u5356\u6570 %s' % (dt_full, st))
-			continue
-		new_r = _compact_sell_order_remark(st)
-		cur_px = float(pinfo.get('px_quote', 0) or 0)
-		try:
-			cur = _get_current_price(C, st, dt_full, cur_px if cur_px > 0 else None, tick_map)
-			if cur is not None and float(cur) > 0:
-				cur_px = float(cur)
-		except Exception:
-			pass
-		if not _passorder_go(C, g.sell_code, st, sh_new, new_r):
-			print('%s [\u5356\u91cd\u6302]passorder\u5931\u8d25 %s' % (dt_full, st))
-			continue
-		pending[new_r] = {
-			't': time.time(),
-			'stock': st,
-			'sh': sh_new,
-			'px_quote': cur_px,
-			'reason': pinfo.get('reason', ''),
-			'avg_c': pinfo.get('avg_c'),
-			'retry': int(pinfo.get('retry', 0)) + 1,
-		}
-		print('%s [ORDER][\u5356\u91cd\u6302] %s %d\u80a1 retry=%d' % (dt_full, st, sh_new, pending[new_r]['retry']))
+		_repost_sell_after_fail(st, pinfo)
 
 
 def _print_sell_signal(C, dt_full, stock, sh, px, reason, tick_map=None):
@@ -2403,15 +2471,16 @@ def _print_sell_signal(C, dt_full, stock, sh, px, reason, tick_map=None):
 	in_wl = can_s in getattr(g, '_mon_pool_codes', frozenset())
 	wl_tag = '\u662f' if in_wl else '\u5426'
 	ledger = '\u7b56\u7565\u8bb0\u8d26' if g.holding.get(stock) else '\u4ec5\u8d26\u6237(\u4e3b\u89c2/\u5176\u4ed6)'
-	print('[SELL] \u65f6\u95f4=%s|\u4ee3\u7801=%s|\u5356\u51fa\u6570=%d|\u5356\u524d\u6301\u4ed3=%d|\u6210\u672c=%s|\u73b0\u4ef7=%.3f|\u6301\u4ed3\u76c8\u4e8f=%s|\u81ea\u9009=%s|\u8bb0\u8d26=%s|\u539f\u56e0=%s'
-	      % (dt_full, stock, sh, tot_s, avg_s, float(cur_px), pnl_s, wl_tag, ledger, reason))
+	rb, rk, det = _sell_rule_parts(reason)
+	print('[SELL] \u65f6\u95f4=%s|\u4ee3\u7801=%s|\u5356\u51fa\u6570=%d|\u5356\u524d\u6301\u4ed3=%d|\u6210\u672c=%s|\u73b0\u4ef7=%.3f|\u6301\u4ed3\u76c8\u4e8f=%s|\u81ea\u9009=%s|\u8bb0\u8d26=%s|\u89c4\u5219\u7c7b=%s|\u89c4\u5219\u9879=%s|\u8be6\u60c5=%s'
+	      % (dt_full, stock, sh, tot_s, avg_s, float(cur_px), pnl_s, wl_tag, ledger, rb or '--', rk or '--', (det or '--')[:160]))
 	live = _should_passorder(C)
 	remark = _compact_sell_order_remark(stock) if live else str(reason or '')[:36].replace('|', '_')
 	placed = False
 	if live:
 		placed = _passorder_go(C, g.sell_code, stock, sh, remark)
 		if not placed:
-			print('%s \u5355\u8fb9\u5931\u8d25 %s \u539f\u56e0=%s' % (dt_full, stock, reason))
+			print('%s \u5355\u8fb9\u5931\u8d25 %s |\u89c4\u5219\u9879=%s|\u8be6\u60c5=%s' % (dt_full, stock, rk or '--', (det or str(reason))[:120]))
 			return False
 		g._sell_order_pending[remark] = {
 			't': time.time(),
@@ -2425,7 +2494,8 @@ def _print_sell_signal(C, dt_full, stock, sh, px, reason, tick_map=None):
 	_mr_set('\u4fe1\u53f7\u5356 %s' % reason, sh, px)
 	g._mr_trade_stock = stock
 	mark = '[ORDER]' if (live and placed) else '[SIGNAL]'
-	print('%s %s[\u5356] %s %d\u80a1 px=%.3f \u539f\u56e0:%s' % (dt_full, mark, stock, sh, px, reason))
+	print('%s %s[\u5356] %s %d\u80a1 px=%.3f |\u89c4\u5219\u7c7b=%s|\u89c4\u5219\u9879=%s|\u8be6\u60c5=%s'
+	      % (dt_full, mark, stock, sh, px, rb or '--', rk or '--', (det or '--')[:120]))
 	return True
 
 
@@ -2499,8 +2569,66 @@ def _fmt_non_atr_sell_start():
 	return '%s:%s' % (s[:2], s[2:4])
 
 
+def _stock_ma_tail_live(C, stock, dt_full, d_str, px_live, period):
+	"""\u76d8\u4e2d\u4f30\u8ba1\u7684\u65e5\u7ebf MA(\u5468\u671f)\uff1a\u6700\u8fd1 period \u4e2a\u4ea4\u6613\u65e5\u6536\u76d8\u5747\u503c\uff1b\u672b\u6839\u4e3a\u5f53\u65e5\u5219\u7528 px \u66ff\u6362\u8be5\u6839\u6536\u76d8\uff1b\u82e5\u65e5\u7ebf\u672a\u66f4\u65b0\u5230\u4eca\u65e5\u5219\u7528\u8fd1 period-1 \u65e5\u6536\u76d8 + px\u3002"""
+	try:
+		px = float(px_live)
+		if px <= 0:
+			return None
+	except (TypeError, ValueError):
+		return None
+	p = max(2, int(period))
+	cnt = max(p + 5, int(getattr(g, 'bar_count', 80)))
+	try:
+		data_d = C.get_market_data_ex(
+			['close', 'high', 'low'], [stock],
+			end_time=dt_full, period='1d', count=cnt, subscribe=False
+		)
+		if stock not in data_d:
+			return None
+		highs = _ohlc_to_list(data_d[stock].get('high'))
+		lows = _ohlc_to_list(data_d[stock].get('low'))
+		closes = _ohlc_to_list(data_d[stock].get('close'))
+		if not highs or not lows or not closes:
+			return None
+		n = min(len(highs), len(lows), len(closes))
+		highs, lows, closes = highs[:n], lows[:n], closes[:n]
+		tags = _ohlc_time_list(data_d, stock)
+		last_d = None
+		if tags and len(tags) >= n:
+			pairs = []
+			for i in range(n):
+				td = _tag_to_yyyymmdd(tags[i])
+				if td:
+					try:
+						pairs.append((int(td), i))
+					except Exception:
+						pass
+			if len(pairs) >= n:
+				pairs.sort(key=lambda x: x[0])
+				last_i = pairs[-1][1]
+				last_d = _tag_to_yyyymmdd(tags[last_i])
+		highs, lows, closes = _align_daily_ohlc_chronological(data_d, stock, highs, lows, closes, ref_px=px)
+	except Exception:
+		return None
+	if len(closes) < p:
+		return None
+	ds = (d_str or '').strip()
+	if last_d == ds or last_d is None:
+		w = list(closes[-p:])
+		w[-1] = px
+	else:
+		if len(closes) < p - 1:
+			return None
+		w = list(closes[-(p - 1):]) + [px]
+	try:
+		return sum(float(x) for x in w) / float(len(w))
+	except Exception:
+		return None
+
+
 def _run_tail_watchlist_cost_stop(C, dt_full, d_str, hhmmss, tick_map, mos):
-	"""\u5c3e\u76d8\uff08>=tail_clear_start\uff09\uff1a\u73b0\u4ef7 vs \u6301\u4ed3\u6210\u672c\u76c8\u4e8f\uff08\u4e0d\u662f vs \u6628\u6536\uff09\u3002\u5224\u522b px_live/avg_c-1 <= tail_cost_stop_pct\uff08\u9ed8\u8ba4-8%\u540c hard_stop_pct\uff09\u5219\u5356\u3002"""
+	"""\u5c3e\u76d8\uff08>=tail_clear_start\uff09\uff1a(1)\u73b0\u4ef7/\u6210\u672c-1<=tail_cost_stop_pct\u5356\uff1b(2)\u82e5\u5f00\u542f tail_sell_below_ma5 \u4e14\u73b0\u4ef7<\u5f53\u524d\u65e5\u7ebfMA5\u4f30\u8ba1\u503c\u5219\u5356\u3002\u4e0e\u6628\u6536\u65e0\u5173\u3002"""
 	if not _in_session_trade(hhmmss):
 		return
 	if hhmmss is None:
@@ -2557,12 +2685,20 @@ def _run_tail_watchlist_cost_stop(C, dt_full, d_str, hhmmss, tick_map, mos):
 			if px_live is None or float(px_live) <= 0:
 				continue
 			# \u5c3e\u76d8\u6301\u4ed3\u76c8\u4e8f\uff1a\u73b0\u4ef7/\u6210\u672c-1 <= thr\uff08\u9ed8\u8ba4-8%\uff09\uff1b\u4e0e\u6628\u6536\u65e0\u5173\u3002
-			if float(px_live) / float(avg_c) - 1.0 > thr:
-				continue
 			px_mx = _live_px_max_for_atr(
 				C, st, dt_full, tick_map, float(px_live), account_last=float(alp) if alp_ok else None)
 			px = float(px_mx) if (px_mx is not None and float(px_mx) > 0) else float(px_live)
-			if _signal_sell_sim(C, st, '\u5c3e\u76d8\u81ea\u9009\u6210\u672c\u4e8f%.1f%%' % (thr * 100.0), dt_full, sh, px, tick_map):
+			reason = None
+			if float(px_live) / float(avg_c) - 1.0 <= thr:
+				reason = _fmt_sell_rule('\u5c3e\u76d8', '\u6210\u672c\u6b62\u635f', '\u76c8\u4e8f\u2264%.1f%%(\u76f8\u5bf9\u6210\u672c,\u95e8\u63a7>=tail_clear)' % (thr * 100.0))
+			elif bool(getattr(g, 'tail_sell_below_ma5', True)):
+				mp = int(getattr(g, 'tail_ma5_period', 5))
+				ma_line = _stock_ma_tail_live(C, st, dt_full, d_str, float(px_live), mp)
+				if ma_line is not None and float(ma_line) > 0 and float(px_live) < float(ma_line):
+					reason = _fmt_sell_rule('\u5c3e\u76d8', '\u7834\u5747\u7ebfMA%d' % mp, '\u73b0=%.3f MA=%.3f(\u4ef7<\u5747\u7ebf)' % (float(px_live), float(ma_line)))
+			if reason is None:
+				continue
+			if _signal_sell_sim(C, st, reason, dt_full, sh, px, tick_map):
 				if not hasattr(g, '_tail_cost_stop_sold'):
 					g._tail_cost_stop_sold = set()
 				g._tail_cost_stop_sold.add(can_k)
@@ -2833,7 +2969,7 @@ def handlebar(C):
 	elif not pool:
 		_mr_set('\u81ea\u9009\u6c60\u7a7a')
 	elif not index_allow_new:
-		_mr_set('\u4e0a\u8bc1\u5728MA5\u4e0b\u4e0d\u5f00\u65b0\u4ed3')
+		_mr_set('T-1\u4e0a\u8bc1\u6536<MA5\u4e0d\u5f00\u65b0')
 	elif ph0:
 		br_l = g.gap_bracket.get(ph0)
 		_mr_set('\u91d1\u5b57\u5854/\u6301\u4ed3 %s \u6863=%s' % (ph0, br_l or '-'))
@@ -2882,7 +3018,7 @@ def handlebar(C):
 				sh = int(getattr(p, 'm_nVolume', 0) or 0)
 				sh = (sh // mos) * mos
 				px = float(getattr(p, 'm_dLastPrice', 0) or 0)
-				_signal_sell_sim(C, st, '\u4e0a\u8bc1\u7834MA10(\u8d26\u6237\u6301\u4ed3\u53c2\u8003)', dt_full, sh, px, tick_map)
+				_signal_sell_sim(C, st, _fmt_sell_rule('\u6307\u6570', '\u4e0a\u8bc1MA10\u6e05\u4ed3', '\u8d26\u6237\u6301\u4ed3\u53c2\u8003'), dt_full, sh, px, tick_map)
 			except Exception:
 				continue
 		for st in list(g.holding.keys()):
@@ -2902,7 +3038,7 @@ def handlebar(C):
 					except Exception:
 						pass
 					px = _get_current_price(C, st, dt_full, fb, tick_map) or fb or 0.0
-					_signal_sell_sim(C, st, '\u4e0a\u8bc1\u7834MA10(\u6a21\u62df\u6301\u4ed3\u6e05\u7a7a)', dt_full, sh, px, tick_map)
+					_signal_sell_sim(C, st, _fmt_sell_rule('\u6307\u6570', '\u4e0a\u8bc1MA10\u6e05\u4ed3', '\u6a21\u62df\u6301\u4ed3\u6e05\u7a7a'), dt_full, sh, px, tick_map)
 
 	def run_risk_sell_signal():
 		if not _in_session_trade(hhmmss):
@@ -2989,10 +3125,19 @@ def handlebar(C):
 					if ac2 is not None and float(ac2) > 0:
 						avg_c = float(ac2)
 
+				if avg_c is not None and float(avg_c) > 0 and _in_session_trade(hhmmss):
+					try:
+						cost_pnl = float(px_live) / float(avg_c) - 1.0
+					except (TypeError, ValueError, ZeroDivisionError):
+						cost_pnl = None
+					if cost_pnl is not None and cost_pnl <= float(g.hard_stop_pct):
+						if _signal_sell_sim(C, st, _fmt_sell_rule('\u98ce\u63a7', '\u6210\u672c\u786c\u6b62\u635f', '\u9608\u503c%.1f%%(\u5168\u5929\u8fde\u7eed\u7ade\u4ef7)' % (float(g.hard_stop_pct) * 100.0)), dt_full, sh, px_live, tick_map):
+							continue
+
 				if touch_hit and _in_session_trade(hhmmss):
 					can_k = (_canonical_stock_code(st) or st, d_str)
 					if can_k not in g._intraday_prev_ref_stop_done:
-						if _signal_sell_sim(C, st, '\u73b0\u4ef7\u76f8\u5bf9\u6628\u6536%.1f%%(\u5168\u5929)' % (touch_pct * 100.0), dt_full, sh, px, tick_map):
+						if _signal_sell_sim(C, st, _fmt_sell_rule('\u98ce\u63a7', '\u6628\u6536\u6b62\u635f', '\u9608\u503c%.1f%%(\u5168\u5929\u76f8\u5bf9\u6628\u6536)' % (touch_pct * 100.0)), dt_full, sh, px_live, tick_map):
 							g._intraday_prev_ref_stop_done.add(can_k)
 						continue
 
@@ -3011,18 +3156,18 @@ def handlebar(C):
 				else:
 					dh_eff = max(1, dh)
 				m_atr, fl_atr, hh_ov, ref_h, dh_cal = _atr_pack_for_position(
-					C, st, dt_full, d_str, data_d, highs, lows, closes, px, avg_c, dh_eff)
+					C, st, dt_full, d_str, data_d, highs, lows, closes, px_live, avg_c, dh_eff)
 				_emit_atr_mon_line(dt_full, st, px, avg_c, dh_eff, highs, lows, closes,
 						   hold_shares=sh_raw, scope_tag='\u81ea\u9009', ref_high=ref_h,
 						   mult=m_atr, stop_floor=fl_atr, hh_daily_override=hh_ov, dh_cal=dh_cal,
 						   px_display=float(px_live))
 				should_tp, note = _check_atr_take_profit_only(
-					dh_eff, highs, lows, closes, px, avg_c, ref_high=ref_h,
+					dh_eff, highs, lows, closes, px_live, avg_c, ref_high=ref_h,
 					mult=m_atr, stop_floor=fl_atr, hh_daily_override=hh_ov)
 				if _vb():
 					print('%s [\u6b62\u76c8\u68c0\u67e5] %s %s' % (dt_full, st, note))
 				if should_tp:
-					_signal_sell_sim(C, st, note, dt_full, sh, px, tick_map)
+					_signal_sell_sim(C, st, _fmt_sell_rule('\u6b62\u76c8', 'ATR\u540a\u706f', note), dt_full, sh, px_live, tick_map)
 			except Exception as e:
 				print('%s [\u98ce\u63a7\u5356\u5f02\u5e38] %s %s' % (dt_full, st, e))
 		_run_tail_watchlist_cost_stop(C, dt_full, d_str, hhmmss, tick_map, mos)
@@ -3040,9 +3185,9 @@ def handlebar(C):
 			_trace(dt_full, '\u65e0\u5f00\u4ed3\u5019\u9009(\u81ea\u9009\u6c60\u7a7a)')
 			return
 		if not index_allow_new:
-			_trace(dt_full, '\u4e0d\u5f00\u65b0\u4ed3: \u4e0a\u8bc1\u5728MA5\u4e0b')
+			_trace(dt_full, '\u4e0d\u5f00\u65b0\u4ed3: T-1\u4e0a\u8bc1\u6536< T-1MA5')
 			if _vb():
-				print('%s [\u4e0d\u5f00\u65b0\u4ed3] \u4e0a\u8bc1\u5728MA5\u4e0b' % dt_full)
+				print('%s [\u4e0d\u5f00\u65b0\u4ed3] T-1\u4e0a\u8bc1\u6536< T-1MA5' % dt_full)
 			return
 		if mhc > 0 and len(already) >= mhc:
 			_trace(dt_full, '\u5df2\u6ee1\u4ed3\u6570 already=%d >= max_hold=%d' % (len(already), mhc))

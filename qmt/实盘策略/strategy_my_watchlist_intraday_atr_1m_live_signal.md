@@ -6,7 +6,7 @@
 
 ## 1. 策略做什么（一句话）
 
-在 **QMT 1 分钟 K 线** 上，从 **自选板块** 取股票池，按 **开盘涨跌幅分档** 做 **分批买入**，用 **上证指数 T-1 的 MA5 门控**（开新仓）与 **MA10 条件清仓** 等，并用 **全天相对昨收止损、尾盘相对成本止损、ATR 止盈** 等做 **卖出与风控**；满足条件时在实盘下 **`passorder`** 下单，否则只打 **`[SIGNAL]`** / **`[ORDER]`** 相关日志。
+在 **QMT 1 分钟 K 线** 上，从 **自选板块** 取股票池，按 **开盘涨跌幅分档** 做 **分批买入**，用 **上证指数 T-1 的 MA5 门控**（开新仓）与 **MA10 条件清仓** 等，并用 **全天相对昨收止损、尾盘监控（成本止损 + 可选跌破个股日线 MA5）、ATR 止盈** 等做 **卖出与风控**；满足条件时在实盘下 **`passorder`** 下单，否则只打 **`[SIGNAL]`** / **`[ORDER]`** 相关日志。
 
 ---
 
@@ -22,15 +22,16 @@
 ## 3. 名词解释（你之前问的 `\u…` 解码后就是这些）
 
 - **自选**：股票池来自 QMT 板块，默认板块名 **`我的自选`**（可用参数 `watchlist_sector_name` 改）。
-- **当日再首买**：默认 **`block_same_day_rebuy_after_sell=True`**：只要本策略 **`_signal_sell_sim` 成功走通卖单**（含实盘挂单、回测信号卖），该规范代码记入 **`g._same_day_sold_canon`**，**同一交易日内** **`_try_first_buy_watchlist_stock` 不再对该票首买**；换日后集合清空。若你在客户端**手工卖出**而未经过本策略卖逻辑，**不会**自动记入该集合，仍可能首买（与账户是否仍显示持仓、`already` 快照有关）。
+- **当日卖出后不回补**：默认 **`block_same_day_rebuy_after_sell=True`**：只要本策略 **`_signal_sell_sim` 成功走通卖单**（含实盘挂单、回测信号卖），该规范代码记入 **`g._same_day_sold_canon`**；同一交易日内不仅 **首买** 会拦截，统一买入口 **`_signal_buy_leg`** 也会拦截（含金字塔加腿），即当日不再买回；换日后集合清空。若你在客户端**手工卖出**而未经过本策略卖逻辑，**不会**自动记入该集合。
 - **分档**：用 **今开 / 昨收 − 1** 得到开盘缺口 `gap`，再划到 A/B/C/D 档；不同档 **首笔买入比例、触发价、加仓腿** 不同（细节与回测策略文档一致）。
 - **开仓 / 买入**：在门控通过时，按分档与金字塔逻辑 **`passorder` 买入**（受 `live_orders`、资金账号、非回测等约束）。
 - **上证 MA5 开新仓门控**（`require_sse_above_ma5_for_new`，默认开）：指数 **000001.SH** 日线。比较的是 **上一完整交易日（T-1）的收盘价** 与 **同一日 T-1 的日线 MA5**（最近 5 根**已完成**日 K 的收盘均值，窗口以 T-1 为最后一根；若日线最后一根已是当日未收市 K，则 T-1 取倒数第二根）。**T-1 收 ≥ T-1 的 MA5** 才允许当日 **无仓首买**（仍受其它门控与时段约束）。**换日时**清空当日闩锁；**首次**出现 bar 的 `hhmmss ≥ sse_ma5_gate_latch_hhmmss`（默认 **93000**，即连续竞价开盘后第一根满足条件的 K）时，将上述比较结果 **冻结**，当日后续 bar **不再重算**该布尔门控（9:30 前若已进入主流程，仍用同一 T-1 公式，与冻结值一致）。详见 **§6.2**。
 - **风控卖（与 ATR 并列的几类）**：
   - **全天·相对昨收**：连续竞价内，**现价 / 昨收 − 1 ≤ `intraday_touch_pct`**（默认 **−9%**，与持仓成本无关），见 `run_risk_sell_signal`。
-  - **尾盘·相对成本**：自 **`tail_clear_start_hhmmss`**（默认 **14:50**）起，遍历 **当日自选池** 内有仓标的，**现价 / 成本 − 1 ≤ `tail_cost_stop_pct`**（默认继承 **`hard_stop_pct` = −8%**），见 `_run_tail_watchlist_cost_stop`（在 `run_risk_sell_signal` 末尾调用）。
+  - **全天·相对成本硬止损**：连续竞价内，**现价 / 成本 − 1 ≤ `hard_stop_pct`**（默认 **−8%**）即卖，见 `run_risk_sell_signal`。
+  - **尾盘·监控**：自 **`tail_clear_start_hhmmss`**（默认 **14:50**）起，遍历 **当日自选池** 内有仓标的：**①** **现价 / 成本 − 1 ≤ `tail_cost_stop_pct`**（默认继承 **`hard_stop_pct` = −8%**）；**②**（默认开启）**现价 < 估计日线 MA5**。见 `_run_tail_watchlist_cost_stop`（在 `run_risk_sell_signal` 末尾调用）。
   - **上证 MA10 清仓**：收在 MA10 下方时清自选池内仓，且须 **`non_atr_sell_start_hhmmss`**（默认约 **14:54**）之后、连续竞价，见 `run_index_liquidate_signal`。
-- **ATR 止盈**：持仓 **盈利** 时，用日线窗口 + 多源现价抬升后的 **吊灯式回撤** 算止盈线，触发则卖（全天随 1m 评估）。**最低利润保护**（`_atr_profit_lock_floor_price`）：持仓日历天数 **`dh_cal` ≥ `atr_lock_floor_min_days`**（默认 **10**）且浮盈已超过 **`atr_lock_min_profit_dec`**（默认约 **15%**）时，抬高止损地板价。
+- **ATR 止盈**：持仓 **盈利** 时，用日线窗口 + 多源现价抬升后的 **吊灯式回撤** 算止盈线，触发则卖（全天随 1m 评估）。**最低利润保护**（`_atr_profit_lock_floor_price`）：持仓日历天数 **`dh_cal` ≥ `atr_lock_floor_min_days`**（默认 **7**）且浮盈 **≥ `atr_lock_min_profit_dec`**（默认 **15%**）时，抬高止损地板价。
 
 ---
 
@@ -124,13 +125,15 @@ else               → C
 - **日志**：`tail_intraday_log` 为真时，首次越过阈值打 **`[昨收止损]`**（含阈值%、昨收、现价、当前跌幅）；卖单备注含「现价相对昨收…(全天)」。
 - **状态**：`g.prev_close_stop_touch_day` 仅用于上述日志去重（换日由换日逻辑重置相关集合；清模拟仓时 `_clear_sim_stock` 会 `pop`）。
 
-### 7.2 尾盘：现价相对成本（与昨收无关）
+### 7.2 尾盘：现价相对成本 + 现价低于日线 MA5（与昨收无关）
 
 - **入口**：模块函数 **`_run_tail_watchlist_cost_stop`**，在 **`run_risk_sell_signal`** 每根处理完 `cand` 后调用。
-- **时间门**：`hhmmss ≥ tail_clear_start_hhmmss`（默认 **145000**）且仍在 **`_in_session_trade`**。
-- **范围**：遍历 **当日自选池** 全部代码；有账户或模拟持仓、且成本与现价有效时，判断 **`px_live / avg_c - 1 ≤ tail_cost_stop_pct`**。默认 **`tail_cost_stop_pct`** 等于 **`hard_stop_pct`（−0.08，即 −8%）**。
-- **与 `[POS]` 一致**：盈亏比例与 **`_pnl_pct_vs_cost`** 同为 **现价/成本−1**（`[POS]` 显示为百分比数字 ×100）；成本取数路径与 **`_account_position_detail`** / **`_position_volume_and_avg`** 一致（若 `m_dOpenPrice` 为 0，账户明细里可能回退 **`m_dLastPrice`**，与纯 `[POS]` 偶有不一致，见源码注释）。
-- **去重**：`g._tail_cost_stop_sold`，成功卖单后写入。
+- **时间门**：`hhmmss ≥ tail_clear_start_hhmmss`（默认 **145000**）且仍在 **`_in_session_trade`**（与 **§7.2 整段** 共同时段，**不同于** 上证 MA10 清仓的 `non_atr_sell_start_hhmmss`）。
+- **范围**：遍历 **当日自选池** 全部代码；有账户或模拟持仓、且成本与现价有效时，按 **① → ②** 择一触发（**先** 判成本亏损，**再** 判 MA5；同一次循环中每票最多卖一次）：
+  1. **相对成本止损**：**`px_live / avg_c - 1 ≤ tail_cost_stop_pct`**。默认 **`tail_cost_stop_pct`** 等于 **`hard_stop_pct`（−0.08，即 −8%）**。
+  2. **低于当下 MA5**（`tail_sell_below_ma5=True` 时）：用日线收盘做时间升序对齐后，**`MA(n)`** 为最近 **`tail_ma5_period`（默认 5）** 个交易日的收盘均价；若 **末根为当日** 则末根用 **当前 `px_live`** 替代，否则为 **前 n−1 日收盘 + 当前价** 共 n 个点求均。若 **`px_live < MA(n)`**（严格小于）则卖。见 **`_stock_ma_tail_live`**。
+- **与 `[POS]` 一致（仅条件 ①）**：盈亏比例与 **`_pnl_pct_vs_cost`** 同为 **现价/成本−1**；成本取数路径与 **`_account_position_detail`** / **`_position_volume_and_avg`** 一致（若 `m_dOpenPrice` 为 0，账户明细里可能回退 **`m_dLastPrice`**，与纯 `[POS]` 偶有不一致，见源码注释）。
+- **去重**：`g._tail_cost_stop_sold`，任意一种尾盘条件成功卖单后写入（同票当日不重复卖）。
 
 ### 7.3 上证 MA10 清仓
 
@@ -139,16 +142,16 @@ else               → C
 ### 7.4 ATR 止盈
 
 - 仅 **浮盈** 时 **`_check_atr_take_profit_only`** 可能触发卖；多源现价与 **`atr_ref_high_use_intraday`** 等见 §11.7。
-- **最低利润保护**：**`atr_lock_floor_min_days`**（默认 **10**）与 **`atr_lock_min_profit_dec`**（默认 **0.15**）参与 **`_atr_profit_lock_floor_price`**，抬高 ATR 止损地板（详见源码 docstring）。
+- **最低利润保护**：**`atr_lock_floor_min_days`**（默认 **7**）与 **`atr_lock_min_profit_dec`**（默认 **0.15**，即浮盈≥15%）参与 **`_atr_profit_lock_floor_price`**，抬高 ATR 止损地板（详见源码 docstring）。
 
 ### 7.5 下单失败与日志
 
-- **`[SELL]`**：在调用 **`passorder` 卖** 之前打印（含数量、成本、现价、盈亏%、原因）；**不代表柜台已接单**。
+- **`[SELL]` / `[ORDER]` / `[SELL-OK]`**：卖出原因统一为三段：**`规则类`**（指数 / 风控 / 尾盘 / 止盈）、**`规则项`**（如上证 MA10 清仓、成本硬止损、昨收止损、ATR 吊灯、尾盘成本、跌破均线）、**`详情`**（阈值、止盈线、m、现价与 MA 等）；源码由 **`_fmt_sell_rule`** 编码，`_sell_rule_parts` 解析。**不代表柜台已接单**。
 - **`passorder` 抛异常**：日志前缀为 **`STRATEGY_TAG`**（源码常量，如 **`我的自选分档建仓[实盘]`**）+ **`passorder ERR …`**。
 - **`passorder` 返回 Python `False`**：同上前缀 + **`passorder 拒单/ret=False …`**（常见于拒单、T+1 不可卖等，取决于 QMT 返回值约定）。
 - **下单返回 `False`（股数、未找到函数等）**：`**时间** 单边失败 代码 原因=…**`。
 - **卖单未成撤单重试**：**`_process_sell_unfilled_cancel_retry`**（参数 **`sell_unfilled_timeout_sec`**、**`sell_unfilled_max_retry`**）；重挂失败有 **`[卖重挂]passorder失败`** 等日志。
-- **成交回报**：**`[SELL-OK]`**（价、量、成本、盈亏%、金额、原因）。
+- **成交回报**：**`[SELL-OK]`**（价、量、成本、盈亏%、金额及 **`规则类|规则项|详情`**）。
 - **自选板块删票**：若 **`auto_remove_sold_from_watchlist=True`**，在 **`[SELL-OK]`** 之后尝试 **`remove_stock_from_sector(板块名, 代码)`**，从 **`watchlist_sector_name`** 对应板块移除该票（与客户端「自选板块」一致时即等价于从自选删掉）。失败打 **`[自选移除ERR]`**；成功打 **`[自选移除OK]`**。
 
 ---
@@ -164,26 +167,31 @@ else               → C
 | `watchlist_sector_name` | 我的自选 | 板块名 |
 | `per_stock_amount` | 100000 | 单票预算（元） |
 | `min_order_shares` | 100 | 最小交易单位 |
-| `max_hold_count` | 0 | 最大同时持仓只数（含账户持仓与策略模拟持仓）；**0 或负数表示不限制**，正整数为上限 |
+| `max_hold_count` | 0（固定） | 当前版本在代码内固定为 **0=不限制**，不再读取 `C.max_hold_count` |
 | `session_gate_prefer_bar_time` | True | **`True`（默认）**：粗门控「是否处 **9:25–15:00**」优先用 **K 线时间** `hhmmss`；夜间复盘/回放不会因本机墙钟不在盘中而整段跳过；设为 `False` 则仅用本机时钟（兼容旧习惯） |
 | `a_first_buy_start_hhmmss` | 92500 | **A 档首买**允许的最早时刻（含边界）；若起点早于 93000，则 **9:25–9:30** 仅走 A 首买或已持仓 A 的金字塔 |
 | `a_first_buy_end_hhmmss` | 102559 | **A 档首买**的最晚时刻（含边界）；默认约 **10:25:59**（与源码一致；加仓腿不受此窗限制） |
-| `require_sse_above_ma5_for_new` | True | **上证 MA5 开新仓门控**：为真时，须 **T-1 日收 ≥ T-1 日线 MA5** 才允许当日 **无仓首买**；见 **§3**、**§6.2** |
+| `require_sse_above_ma5_for_new` | True | **上证 MA5 开新仓门控**：为真时，须 **T-1 日收 ≥ T-1 日线 MA5** 才允许当日 **无仓首买**；`False` 可关闭。见 **§3**、**§6.2** |
 | `sse_ma5_gate_latch_hhmmss` | 93000 | **首次**达到该 `hhmmss`（含）的 bar 将当日 MA5 门控结果 **冻结**至换日；若希望与集合竞价末段对齐可改为 **92500** 等 |
 | `ma_index_period_short` / `long` | 5 / 10 | 指数均线周期（MA5 门控用 short；MA10 清仓用 long） |
 | `atr_period` | 14 | ATR 周期 |
-| `atr_stop_mult` | 2.0 | 止盈距离 = ATR × 倍数 |
+| `atr_stop_mult` | 2.5 | ATR 动态倍数的初始值（`atr_stop_mult_initial` 未单设时继承） |
+| `atr_stop_mult_min` / `atr_stop_mult_max` | 1.0 / 3.0 | ATR 动态倍数夹紧区间（默认 **[1.0, 3.0]**） |
+| `atr_stop_half_life_days` | 10 | ATR 动态倍数从起点衰减到下限的参考半衰期（天）；`ratio=(dh−1)/half_life` 封顶 1 |
 | `atr_ref_high_use_intraday` | True | HH 是否合并分时/现价等 |
 | `bar_count` | 80 | 日线拉取根数 |
 | `allow_atr_same_day` | True | **强烈建议实盘保持 True**。当日买入时，`dh_eff` 若为 0 会导致 ATR 无效、`[ATR-MON]` 备注为「持仓不满1日」。若设为 False，自选当日买入容易出现止损线全为 `--` |
-| `atr_lock_floor_min_days` | 10 | **最低利润保护**生效所需持仓日历天数下限（`dh_cal ≥` 该值）；与 `_atr_profit_lock_floor_price` 一致 |
-| `atr_lock_min_profit_dec` | 0.15 | 最低利润保护还要求当前浮盈 **>** 该小数（默认约 **+15%**） |
-| `hard_stop_pct` | -0.08 | **尾盘成本止损**默认阈值：当未单独设置 **`tail_cost_stop_pct`** 时，**`tail_cost_stop_pct` 继承本值**；判断式为 **现价/持仓成本 − 1** |
+| `atr_lock_floor_min_days` | 7 | **最低利润保护**生效所需持仓日历天数下限（`dh_cal ≥` 该值）；与 `_atr_profit_lock_floor_price` 一致 |
+| `atr_lock_min_profit_dec` | 0.15 | 最低利润保护还要求当前浮盈 **≥** 该小数（默认 **+15%**） |
+| `atr_lock_ratio_base` / `slope` / `cap` | 0.60 / 0.025 / 0.97 | 保护比例曲线：`lock_ratio=min(cap, base+slope*dh)`；值越大，保底线抬得越高，锁利润越强 |
+| `hard_stop_pct` | -0.08 | **全时段成本硬止损阈值**（连续竞价内即生效）；同时作为尾盘成本止损的默认继承值 |
 | `tail_cost_stop_pct` | 继承 `hard_stop_pct` | 尾盘遍历自选时，**持仓亏损**达到该比例（小数）则卖；见 §7.2 |
 | `intraday_touch_pct` | -0.09 | **全天**相对昨收：现价/昨收−1 ≤ 该值触发卖（默认 **−9%**）；**与成本无关** |
 | `intraday_fail_recover_pct` | -0.06 | 仍从 `C` 读取并保存在 **`g`**，**当前版本卖出主路径未使用**（预留参数） |
-| `tail_clear_start_hhmmss` | 145000 | **尾盘成本止损**开始评估的最早 `hhmmss`（默认 **14:50:00**） |
-| `non_atr_sell_start_hhmmss` | 145400 | **`_non_atr_sell_time_ok`**：主要用于 **上证 MA10 清仓**等须在收盘前较晚时刻才评估的逻辑（默认约 **14:54**）；**不等于**尾盘成本止损的起始时刻 |
+| `tail_clear_start_hhmmss` | 145000 | **尾盘监控**（成本止损 + 可选 MA5）开始评估的最早 `hhmmss`（默认 **14:50:00**） |
+| `tail_sell_below_ma5` | True | **尾盘**若 **现价 < 当日估计的日线 MA(`tail_ma5_period`)** 则卖（与成本无关）；`False` 关闭 |
+| `tail_ma5_period` | 5 | 尾盘 MA 周期（默认 **5**，即 MA5）；须 ≥2 |
+| `non_atr_sell_start_hhmmss` | 145400 | **`_non_atr_sell_time_ok`**：主要用于 **上证 MA10 清仓**等须在收盘前较晚时刻才评估的逻辑（默认约 **14:54**）；**不等于**尾盘监控的起始时刻 |
 | `tail_intraday_log` | True | **`[昨收止损]`** 等全天相对昨收触阈首条日志开关（名称历史遗留，不仅「尾盘」） |
 | `atr_intraday_log` | True | 每分钟 ATR 监控日志 |
 | `atr_log_account_non_watchlist` | True | 自选外持仓是否打 ATR 日志（一般不自动卖） |
@@ -200,7 +208,7 @@ else               → C
 | `strategy_order_name` | 自选分档 | 委托备注名（截断） |
 | `quick_trade` | 2 | 下单快速参数 |
 | `sell_unfilled_timeout_sec` | 60 | 卖单未成交超时（秒）后撤单重挂逻辑，见 **`_process_sell_unfilled_cancel_retry`** |
-| `sell_unfilled_max_retry` | 0 | 重挂次数上限；**0** 表示不限制（与源码打印「无限」一致） |
+| `sell_unfilled_max_retry` | 0（固定） | 当前版本代码内固定 **无限重挂**；卖单撤单/未同步超时后都会继续重挂直到成交或无可卖数 |
 
 ---
 
@@ -311,11 +319,11 @@ QMT 常把 **`passorder`、`get_trade_detail_data`** 注入在 **`__main__`**，
 | `_intraday_high_since_open` | 当日从开盘到 `dt_full` 的 **1m high 最大值**（用于抬 `ref_high`）。 |
 | `_live_px_max_for_atr` | 多路价格（`base_px`、tick_map、全推、**参数 `account_last`**、1m 收、1m high）取 **max**；`account_last` 由调用方从 `_account_last_price_map` 传入，避免函数内再扫一遍持仓。 |
 | `_atr_trailing_stop_numbers` | 用 `talib.ATR` 与持有天数窗口、`ref_high` 算 **吊灯止损** 相关数值 `(stop, atr, hh_eff, err, hh_daily)`。 |
-| `_atr_dynamic_mult` | 由持仓日历天数 **`dh_cal`** 对初始 ATR 倍数做衰减（半衰期 **`atr_stop_half_life_days`** 等），夹在 **`atr_stop_mult_min`** / **`atr_stop_mult_max`** 之间。 |
-| `_atr_profit_lock_floor_price` | **最低利润保护**：`dh_cal ≥ atr_lock_floor_min_days` 且浮盈 **>** `atr_lock_min_profit_dec` 时返回抬高的 **止损地板价**；否则 **`None`**。 |
+| `_atr_dynamic_mult` | 由持仓日历天数 **`dh_cal`** 在区间 **`[atr_stop_mult_min, atr_stop_mult_max]`** 内做平滑衰减（参考 `half_life` 天由起点降到下限），避免长期卡在上限。 |
+| `_atr_profit_lock_floor_price` | **最低利润保护**：`dh_cal ≥ atr_lock_floor_min_days` 且浮盈 **≥** `atr_lock_min_profit_dec` 时返回抬高的 **止损地板价**；否则 **`None`**。 |
 | `_atr_pack_for_position` | 汇总 **`_atr_stop_mult_for_hold_days`**、floor、`ref_high`、`dh_cal` 等供监控与止盈判断。 |
 | `_check_atr_take_profit_only` | **仅浮盈** 时判断是否 **现价 ≤ ATR 止损线**，返回是否止盈及说明。 |
-| `_emit_atr_mon_line` | 按分钟键去重后打一条 **`[ATR-MON]`**（盈亏%、止损线、缓冲 ATR 倍等）；**现=** 与传入的 **`px`** 一致，取价链为 **tick / 全推 / 持仓 `m_dLastPrice` / 1m**，**不用日线最后一根 `close` 作现价后备**（易与昨收/日收混淆）。 |
+| `_emit_atr_mon_line` | 按分钟键去重后打一条 **`[ATR-MON]`**（盈亏%、止损线、**保底线**、缓冲 ATR 倍等）；展示价用 `px_display`（实时价），ATR 判定价用 `px`（可为多源 max）。 |
 | `_emit_atr_non_watchlist_account_positions` | 对 **自选外** 账户持仓只打 **`[ATR-MON]`**，不触发本策略卖单。 |
 
 ### 11.8 日志与分钟汇总（MR）
@@ -337,13 +345,15 @@ QMT 常把 **`passorder`、`get_trade_detail_data`** 注入在 **`__main__`**，
 |------|------|
 | `_should_passorder` | 需 `live_orders`、`accid` 非空，且 **非** 回测上下文才允许真实 **`passorder`**。 |
 | `_passorder_go` | 股数按最小单位向下取整后调用 `_passorder_fn()`；投资备注截断；**捕获异常**并识别 **`ret is False`** 拒单。 |
-| `_run_tail_watchlist_cost_stop` | **尾盘**遍历自选池内有仓标的：**现价/成本−1 ≤ `tail_cost_stop_pct`** 则 **`_signal_sell_sim`**；依赖 **`tail_clear_start_hhmmss`** 与 **`g._tail_cost_stop_sold`** 去重。 |
+| `_stock_ma_tail_live` | 估计盘中 **日线 MA(n)**（末根为当日则用现价替换该根收盘）。 |
+| `_run_tail_watchlist_cost_stop` | **尾盘**（≥`tail_clear_start_hhmmss`）遍历自选池内有仓标的：**①** 现价/成本−1 ≤ `tail_cost_stop_pct`；**②**（可选）现价 < 估计 MA(`tail_ma5_period`)。命中则 **`_signal_sell_sim`**；依赖 **`g._tail_cost_stop_sold`** 去重。 |
 | `_compact_sell_order_remark` | 生成实盘卖单 **`userOrderId`** 短备注（如 **`SL*`**），与 pending 字典键一致。 |
 | `_stock_has_pending_sell` | 某代码是否已有未完结策略卖单（防重复 **`passorder` 卖**）。 |
-| `_process_sell_unfilled_cancel_retry` | 扫描 **`g._sell_order_pending`**：超时未成交则撤单并重挂（受 **`sell_unfilled_*`** 参数约束）。 |
+| `_process_sell_unfilled_cancel_retry` | 扫描 **`g._sell_order_pending`**：未成交则撤单并重挂；订单已撤/未同步超时也会继续重挂，默认无上限，直到成交或无可卖数。 |
 | `_emit_sell_fill_success` | 成交匹配后打 **`[SELL-OK]`** 并清理 pending。 |
 | `_signal_buy_leg` | 一笔 **固定金额** 买腿：算股数、日志或 **`[ORDER]`** 买。 |
-| `_print_sell_signal` | 打印 **`[SELL]`** 行并视 **`live_orders`** 调用 **`_passorder_go` 卖**；失败时 **`单边失败`** 并返回 **`False`**。 |
+| `_fmt_sell_rule` / `_sell_rule_parts` | 组装 / 解析 **`规则类|规则项|详情`**，供各类卖出路径共用。 |
+| `_print_sell_signal` | 打印 **`[SELL]`**（含 **`规则类|规则项|详情`**）并视 **`live_orders`** 调用 **`_passorder_go` 卖**；失败时 **`单边失败`** 并返回 **`False`**。 |
 | `_signal_sell_sim` | 卖统一入口： pending 卖单去重、**`_print_sell_signal`**；回测/关单时可清 **`g`** 模拟仓。 |
 | `_clear_sim_stock` | 清除某标的在 **`g`** 中的模拟持仓、分档、金字塔腿、**`prev_close_stop_touch_day`** 等状态。 |
 
@@ -374,7 +384,7 @@ QMT 常把 **`passorder`、`get_trade_detail_data`** 注入在 **`__main__`**，
 | 函数 | 作用 |
 |------|------|
 | `run_index_liquidate_signal` | 上证 **破 MA10** 时，对 **自选池内** 账户仓与模拟仓发卖（受 **`_non_atr_sell_time_ok`**、连续竞价与 **`g._ma10_signal_latched`** 限制）。 |
-| `run_risk_sell_signal` | 自选池候选：**全天现价相对昨收**止损、**ATR 止盈**；末尾调用 **`_run_tail_watchlist_cost_stop`**（**尾盘现价相对成本**）。单票异常打 **`[风控卖异常]`**，不阻断其它票。 |
+| `run_risk_sell_signal` | 自选池候选：**全天现价相对成本硬止损**、**全天现价相对昨收止损**、**ATR 止盈**；末尾调用 **`_run_tail_watchlist_cost_stop`**（**尾盘成本止损 + 可选跌破日线 MA5**）。单票异常打 **`[风控卖异常]`**，不阻断其它票。 |
 | `run_pyramid_and_entry_signal` | **有主仓**：金字塔加仓腿；**无仓** 且过门控：按 **A/B/C/D** 档做首买及后续腿。 |
 
 ---
