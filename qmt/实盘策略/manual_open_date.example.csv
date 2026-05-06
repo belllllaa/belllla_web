@@ -1,4 +1,4 @@
 # code,open_date
-# Col1: 000001.SZ or 000001; Col2: YYYYMMDD
+# Col1: 000001.SZ or 000001; Col2: 开仓日 YYYYMMDD（交易日）
 # In QMT set: ContextInfo.open_date_csv_path = r'C:\path\to\your_open_date.csv'
-001330.SZ,20260419
+001330.SZ,20260506

@@ -202,6 +202,60 @@ def _tag_to_yyyymmdd(raw):
 	return None
 
 
+# \u4e0a\u8bc1\u6240 2026 \u5e74\u8282\u5047\u65e5\u4f11\u5e02\uff08\u4e0d\u542b\u5468\u672b\uff09\uff0c\u4e0e\u8bc1\u76d1\u4f1a/\u6caa\u6df1\u516c\u544a\u5bf9\u9f50\uff1b\u5176\u4ed6\u5e74\u4efd\u4ec5\u6309\u5468\u672b\u5224\u65ad
+# \u53c2\u8003\uff1aqmt/fund_flow/calendar_utils.py HOLIDAYS_2026
+_CN_SSE_EXTRA_HOLIDAYS = frozenset({
+	'20260101', '20260102', '20260103',
+	'20260215', '20260216', '20260217', '20260218', '20260219',
+	'20260220', '20260221', '20260222', '20260223',
+	'20260404', '20260405', '20260406',
+	'20260501', '20260502', '20260503', '20260504', '20260505',
+	'20260619', '20260620', '20260621',
+	'20260925', '20260926', '20260927',
+	'20261001', '20261002', '20261003', '20261004', '20261005', '20261006', '20261007',
+})
+
+
+def _is_cn_sse_trading_day(ymd):
+	"""A \u80a1\u7b80\u5316\uff1a\u5468\u4e00\u81f3\u5468\u4e94\u4e14\u975e 2026 \u516c\u544a\u4f11\u5e02\u65e5\uff08\u5176\u4ed6\u5e74\u4e3b\u8981\u4ec5\u6392\u9664\u5468\u672b\uff09\u3002"""
+	if not ymd or len(str(ymd)) < 8:
+		return False
+	s = str(ymd)[:8]
+	if not s.isdigit():
+		return False
+	try:
+		dt = datetime.datetime.strptime(s, '%Y%m%d')
+	except ValueError:
+		return False
+	if dt.weekday() >= 5:
+		return False
+	return s not in _CN_SSE_EXTRA_HOLIDAYS
+
+
+def _trading_sessions_inclusive(bdate, d_str):
+	"""\u4ece\u5f00\u4ed3\u65e5 bdate \u5230\u5f53\u65e5 d_str\uff0c\u3010\u542b\u9996\u5c3e\u3011\u7684\u4ea4\u6613\u65e5\u5929\u6570\uff08\u957f\u5047\u63a5 D1\uff09\u3002"""
+	b0 = _tag_to_yyyymmdd(str(bdate)) if bdate else None
+	t0 = _tag_to_yyyymmdd(str(d_str)) if d_str else None
+	if not b0 or not t0 or b0 > t0:
+		return 1
+	n = 0
+	d = datetime.datetime.strptime(b0, '%Y%m%d')
+	e = datetime.datetime.strptime(t0, '%Y%m%d')
+	while d <= e:
+		s = d.strftime('%Y%m%d')
+		if _is_cn_sse_trading_day(s):
+			n += 1
+		d += datetime.timedelta(days=1)
+	return max(1, n)
+
+
+def _trade_date_key(s):
+	"""\u7edf\u4e00 YYYYMMDD \u5b57\u7b26\u4e32\uff0c\u7528\u4e8e\u65e5\u7ebf\u4e0e\u624b\u5de5\u5f00\u4ed3\u65e5 lookup\u3002"""
+	if not s:
+		return None
+	return _tag_to_yyyymmdd(str(s))
+
+
 def _m1_last_close(C, stock, dt_full):
 	try:
 		m1 = C.get_market_data_ex(['close'], [stock], end_time=dt_full, period='1m', count=1, subscribe=False)
@@ -669,7 +723,7 @@ def _emit_position_holdings(C, dt_full, d_str, tick_map):
 
 def _emit_monitor_unified_summary(dt_full, pos_codes_set, pool_codes_set):
 	"""\u81ea\u9009 vs \u8d26\u6237\u5168\u90e8\u6301\u4ed3\uff0c\u4fbf\u4e8e\u5b9e\u76d8\u7edf\u4e00\u76d1\u63a7\u56de\u6d4b\u65e5\u5fd7\u3002"""
-	if not getattr(g, 'sell_monitor_summary_log', True):
+	if not g.sell_monitor_summary_log:
 		return
 	try:
 		ps = frozenset(pos_codes_set or [])
@@ -679,7 +733,7 @@ def _emit_monitor_unified_summary(dt_full, pos_codes_set, pool_codes_set):
 	n_ps, n_pl = len(ps), len(pl)
 	both = len(ps & pl)
 	out_only = len(ps - pl)
-	mon = getattr(g, 'monitor_account_risk_sells', True)
+	mon = g.monitor_account_risk_sells
 	acct_mode = '\u81ea\u9009\u5185\u8d26\u6237+g' if mon else '\u4ec5\u81ea\u9009\u5185g\u8bb0\u8d26'
 	print('[MON] \u65f6\u95f4=%s|\u81ea\u9009\u6c60\u6570=%d|\u8d26\u6237\u6301\u4ed3\u6570=%d|\u81ea\u9009\u2229\u6301\u4ed3=%d|\u81ea\u9009\u5916(\u4e0d\u81ea\u52a8\u5356)=%d|\u5356\u5355\u8303\u56f4=%s|\u5907=M10/\u98ce\u63a7\u4ec5\u81ea\u9009'
 	      % (dt_full, n_pl, n_ps, both, out_only, acct_mode))
@@ -1143,7 +1197,7 @@ def _account_position_detail(stock):
 
 
 def _stock_hold_days(stock, d_str):
-	"""\u6309\u624b\u5de5 CSV \u5f00\u4ed3\u65e5\u4f30\u7b97\u6301\u4ed3\u5929\u6570\uff1b\u672a\u5339\u914d\u6309 1 \u5929\u3002"""
+	"""\u4ece\u624b\u5de5 CSV \u5f00\u4ed3\u65e5\u5230 d_str\uff0c\u3010\u542b\u9996\u5c3e\u3011\u7684\u4ea4\u6613\u65e5\u5929\u6570\uff08\u4e0d\u518d\u7528\u81ea\u7136\u65e5\uff0c\u907f\u514d\u957f\u5047\u540e D \u7d22\u5f15/\u56de\u9000 d0 \u9519\u4f4d\uff09\u3002"""
 	if not stock or not d_str:
 		return 1
 	_emit_hold_days_debug_once(stock, d_str)
@@ -1151,9 +1205,7 @@ def _stock_hold_days(stock, d_str):
 	if not bdate:
 		return 1
 	try:
-		dh = (datetime.datetime.strptime(d_str, '%Y%m%d') - datetime.datetime.strptime(bdate, '%Y%m%d')).days
-		# \u5f53\u65e5\u4e70\u5165\u65e5\u671f\u5dee\u4e3a 0\uff0c\u7edf\u4e00\u663e\u793a\u4e3a\u6301\u4ed3 1 \u5929\uff08\u4e0e\u884c\u60c5\u8f6f\u4ef6\u4e60\u60ef\u4e00\u81f4\uff09
-		return max(1, int(dh))
+		return _trading_sessions_inclusive(bdate, d_str)
 	except Exception:
 		return 1
 
@@ -1182,12 +1234,105 @@ def _emit_hold_days_debug_once(stock, d_str):
 
 
 def _effective_buy_date(stock, d_str):
-	"""\u4ec5\u624b\u5de5 CSV \u4e2d\u7684 open_date\uff08YYYYMMDD\uff09\uff1b\u5173\u95ed use_manual_hold_days_csv \u6216\u65e0\u884c\u5219 None\u3002"""
+	"""\u624b\u5de5 CSV\uff08\u9ed8\u8ba4 manual_open_date_my_holdings.csv\uff0c\u7531 init \u4e2d open_date_csv_path \u52a0\u8f7d\uff09\u4e2d\u7684\u5f00\u4ed3\u65e5 YYYYMMDD\u3002
+	grid_d3 \u7684 D0 \u4ec5\u4f9d\u6b64\u65e5\u671f\uff0c\u4e0d\u518d\u5012\u63a8\u3002\u5173\u95ed use_manual_hold_days_csv \u6216\u65e0\u884c\u5219 None\u3002"""
 	if not getattr(g, 'use_manual_hold_days_csv', True):
 		return None
 	can = _canonical_stock_code(stock) or stock
 	_manual_hold_csv_reload(d_str)
 	return (getattr(g, '_manual_open_dates', None) or {}).get(can)
+
+
+def _daily_date_open_close_series(data_d, stock):
+	"""\u6309\u4ea4\u6613\u65e5\u5347\u5e8f\u8fd4\u56de [(YYYYMMDD, open, close), ...]\uff1b\u7528\u4e8e\u91cd\u5efa D0/D1/D2/D3\u3002"""
+	if not data_d or stock not in data_d:
+		return []
+	opens = _ohlc_to_list(data_d[stock].get('open'))
+	closes = _ohlc_to_list(data_d[stock].get('close'))
+	if not opens or not closes:
+		return []
+	n = min(len(opens), len(closes))
+	opens = list(opens[:n])
+	closes = list(closes[:n])
+	tags = _ohlc_time_list(data_d, stock)
+	rows = []
+	if tags and len(tags) >= n:
+		for i in range(n):
+			td = _tag_to_yyyymmdd(tags[i])
+			if not td:
+				continue
+			try:
+				rows.append((int(td), float(opens[i]), float(closes[i])))
+			except Exception:
+				continue
+		rows.sort(key=lambda x: x[0])
+		out = []
+		for td, opn, cls in rows:
+			if out and out[-1][0] == str(td):
+				out[-1] = (str(td), opn, cls)
+			else:
+				out.append((str(td), opn, cls))
+		return out
+	# \u67d0\u4e9b\u73af\u5883\u65e5\u7ebf\u6ca1\u6709\u53ef\u7528 timetag\uff1a\u56de\u9000\u987a\u5e8f\u7d22\u5f15\uff0c\u907f\u514d GRID \u5168\u90e8\u65e0\u8f93\u51fa
+	return [('IDX%04d' % i, float(opens[i]), float(closes[i])) for i in range(n)]
+
+
+def _grid_resolve_d0_and_day_idx(data_d, stock, d_str):
+	"""\u7f51\u683c D0\uff1a\u4ec5\u7528\u624b\u5de5 CSV\uff08\u9ed8\u8ba4\u4e0e\u7b56\u7565\u540c\u76ee\u5f55 manual_open_date_my_holdings.csv\uff0c\u7531 open_date_csv_path \u52a0\u8f7d\uff09\u4e2d\u7684\u5f00\u4ed3\u65e5\u3002
+	\u5728\u5f53\u524d\u65e5\u7ebf\u5e8f\u5217\u4e2d\u67e5\u8be5\u65e5\u5f00\u76d8\u4ef7\u4f5c\u4e3a D0 \u951a\u70b9\uff1b\u65e0 CSV \u884c\u3001\u65e5\u7ebf\u7a97\u53e3\u5185\u65e0\u8be5\u4ea4\u6613\u65e5\u3001\u6216\u4ec5\u6709 IDX \u5047\u65e5\u671f\u65f6\u8fd4\u56de None\uff08\u4e0d\u7528\u6301\u4ed3\u5929\u6570/\u6210\u672c/g.buy_date \u5012\u63a8\uff09\u3002"""
+	if not data_d or stock not in data_d or not d_str:
+		return None
+	if not getattr(g, 'use_manual_hold_days_csv', True):
+		return None
+	series = _daily_date_open_close_series(data_d, stock)
+	if not series:
+		return None
+	date_to_idx = {d: i for i, (d, _o, _c) in enumerate(series)}
+	dk = _trade_date_key(d_str)
+	today_idx = date_to_idx.get(dk) if dk else None
+	today_fallback = False
+	if today_idx is None:
+		today_idx = len(series) - 1
+		today_fallback = True
+	bdate_manual = _effective_buy_date(stock, d_str)
+	if not bdate_manual:
+		return None
+	bdate_k = _trade_date_key(bdate_manual)
+	if not bdate_k or str(bdate_k).startswith('IDX'):
+		return None
+	if bdate_k not in date_to_idx:
+		return None
+	bi = date_to_idx[bdate_k]
+	if today_idx < bi:
+		return None
+	day_idx = int(today_idx - bi)
+	try:
+		d0_open = float(series[bi][1])
+	except Exception:
+		return None
+	if d0_open <= 0:
+		return None
+	bdate_disp = str(bdate_k)
+	anchor_source = 'manual_csv_open_date'
+	if today_fallback:
+		anchor_source = (str(anchor_source) + '+last_bar').strip('+')
+	return series, today_idx, today_fallback, day_idx, d0_open, bdate_disp, anchor_source
+
+
+def _emit_grid_anchor_line(dt_full, stock, day_idx, bdate, d0_open, sl_px, tp_px, px_live, source_tag=''):
+	"""网格锚定简日志：每票每分钟最多一条，便于核对 D0/止损/止盈。"""
+	try:
+		cur_key = dt_full[:12]
+		if not hasattr(g, '_grid_last_minute_log'):
+			g._grid_last_minute_log = {}
+		if g._grid_last_minute_log.get(stock) == cur_key:
+			return
+		g._grid_last_minute_log[stock] = cur_key
+		d_txt = ('D%d' % int(day_idx)) if day_idx is not None else '--'
+		print('[GRID] 时间=%s|代码=%s|当前=%s|开仓日=%s|D0开盘=%.3f|止损价=%.3f|止盈价=%.3f|现价=%.3f|来源=%s'
+		      % (dt_full, stock, d_txt, (bdate or '--'), float(d0_open), float(sl_px), float(tp_px), float(px_live), (source_tag or '--')))
+	except Exception:
+		pass
 
 
 def _m1_last_high(C, stock, dt_full):
@@ -1290,8 +1435,11 @@ def _sse_ma_state(C, dt_full, d_str=None, hhmmss=None):
 		cl0 = list(closes)
 		_, _, closes = _align_daily_ohlc_chronological(data_d, INDEX_SSE, cl0, list(cl0), list(cl0), None)
 		last_raw = float(closes[-1])
-		p5, p10 = int(g.ma_index_period_short), int(g.ma_index_period_long)
-		ma10 = sum(float(x) for x in closes[-p10:]) / float(p10)
+		p5 = int(g.ma_index_period_short)
+		liq_p = max(2, int(getattr(g, 'index_liquidate_ma_period', 10)))
+		if len(closes) < liq_p:
+			return None, None, None, True, False
+		ma10 = sum(float(x) for x in closes[-liq_p:]) / float(liq_p)
 		index_liquidate_all = bool(last_raw < ma10)
 		i1 = _sse_t1_close_index(closes, data_d, d_str)
 		if i1 is None or i1 < p5 - 1:
@@ -1645,7 +1793,7 @@ def _emit_atr_non_watchlist_account_positions(C, dt_full, d_str, tick_map, wl):
 	"""\u8d26\u6237\u4e2d\u5b58\u5728\u4f46\u4e0d\u5728\u81ea\u9009\u6c60\u7684\u6301\u4ed3\uff1a\u4ec5\u8f93\u51fa [ATR-MON]\uff0c\u4e0d\u8d70\u672c\u7b56\u7565\u5356\u51fa\uff08\u4e0e\u98ce\u63a7\u5faa\u73af\u63a5\u89e6\uff0c\u6bcf\u5206\u949f\u4e00\u6761\uff09\u3002"""
 	if not getattr(g, 'atr_intraday_log', True):
 		return
-	if not bool(getattr(g, 'atr_log_account_non_watchlist', True)):
+	if not g.atr_log_account_non_watchlist:
 		return
 	if not (getattr(g, 'accid', '') or '').strip():
 		return
@@ -1786,13 +1934,15 @@ def init(C):
 	g.account_type = getattr(C, 'accountType', 'STOCK') or getattr(C, 'account_type', 'STOCK') or 'STOCK'
 
 	g.watchlist_sector_name = getattr(C, 'watchlist_sector_name', '\u6211\u7684\u81ea\u9009')
-	g.per_stock_amount = float(getattr(C, 'per_stock_amount', 100000))
+	g.per_stock_amount = float(getattr(C, 'per_stock_amount', 200000))
+	g.per_stock_max_amount = float(getattr(C, 'per_stock_max_amount', 200000))
 	g.min_order_shares = int(getattr(C, 'min_order_shares', 100))
 	# \u6700\u5927\u540c\u65f6\u6301\u4ed3\u53ea\u6570\uff1a\u6052\u4e3a 0=\u4e0d\u9650\u5236\uff08\u5b9e\u76d8\u9700\u6c42\u65e0\u4e0a\u9650\uff0c\u4e0d\u8bfb C.max_hold_count\uff09
 	g.max_hold_count = 0
 	g.require_sse_above_ma5_for_new = bool(getattr(C, 'require_sse_above_ma5_for_new', True))
 	g.ma_index_period_short = int(getattr(C, 'ma_index_period_short', 5))
 	g.ma_index_period_long = int(getattr(C, 'ma_index_period_long', 10))
+	g.index_liquidate_ma_period = max(2, int(getattr(C, 'index_liquidate_ma_period', 10)))
 	# \u4e0a\u8bc1 MA5 \u5f00\u65b0\u95e8\u63a7\uff1a\u9996\u6b21 bar \u65f6\u523b >= \u6b64\u503c\u65f6\u51bb\u7ed3\u5f53\u65e5 T-1 vs MA5 \u5224\u65ad\uff08\u9ed8\u8ba4 93000=\u8fde\u7eed\u7ade\u4ef7\u5f00\u76d8\uff09
 	g.sse_ma5_gate_latch_hhmmss = int(getattr(C, 'sse_ma5_gate_latch_hhmmss', 93000))
 	g.atr_period = int(getattr(C, 'atr_period', 14))
@@ -1805,9 +1955,9 @@ def init(C):
 		_atr_ini = getattr(C, 'atr_stop_mult', 2.5)
 	g.atr_stop_mult_initial = float(_atr_ini)
 	g.atr_stop_mult = float(_atr_ini)
-	g.atr_stop_half_life_days = float(getattr(C, 'atr_stop_half_life_days', 10.0))
+	g.atr_stop_half_life_days = float(getattr(C, 'atr_stop_half_life_days', 7.0))
 	g.atr_stop_mult_min = float(getattr(C, 'atr_stop_mult_min', 1.0))
-	g.atr_stop_mult_max = float(getattr(C, 'atr_stop_mult_max', 3.0))
+	g.atr_stop_mult_max = float(getattr(C, 'atr_stop_mult_max', 2.2))
 	_lo, _hi = float(g.atr_stop_mult_min), float(g.atr_stop_mult_max)
 	if _hi < _lo:
 		_lo, _hi = _hi, _lo
@@ -1822,16 +1972,29 @@ def init(C):
 	g.verbose_log = bool(getattr(C, 'verbose_log', True))
 	g.allow_atr_same_day = bool(getattr(C, 'allow_atr_same_day', True))
 	# hard_stop_pct / tail_cost_stop_pct: \u5c3e\u76d8\u81ea\u9009\uff0c\u5224\u522b\u5f0f\u4e3a \u73b0\u4ef7/\u6301\u4ed3\u6210\u672c-1\uff08\u6301\u4ed3\u76c8\u4e8f\uff09\uff0c\u4e0e\u6628\u6536\u65e0\u5173\u3002
-	g.hard_stop_pct = float(getattr(C, 'hard_stop_pct', -0.08))
-	g.tail_cost_stop_pct = float(getattr(C, 'tail_cost_stop_pct', g.hard_stop_pct))
+	g.hard_stop_pct = float(getattr(C, 'hard_stop_pct', -0.05))
+	g.tail_cost_stop_pct = float(getattr(C, 'tail_cost_stop_pct', -0.05))
 	# intraday_touch_pct: \u5168\u5929\u8fde\u7eed\u7ade\u4ef7\uff0c\u5224\u522b\u5f0f\u4e3a \u73b0\u4ef7/\u6628\u6536-1\uff08\u5f53\u65e5\u8dcc\u5e45\u76f8\u5bf9\u6628\u6536\uff09\uff0c\u4e0e\u6210\u672c\u65e0\u5173\uff08\u9ed8\u8ba4-9%\u4fbf\u4e8e\u8dcc\u505c\u524d\u6392\u5355\uff09\u3002
-	g.intraday_touch_pct = float(getattr(C, 'intraday_touch_pct', -0.09))
-	g.intraday_fail_recover_pct = float(getattr(C, 'intraday_fail_recover_pct', -0.06))
+	g.intraday_touch_pct = float(getattr(C, 'intraday_touch_pct', -0.05))
 	g.tail_clear_start_hhmmss = int(getattr(C, 'tail_clear_start_hhmmss', 145000))
 	# \u5c3e\u76d8\u76d1\u63a7\uff1a\u73b0\u4ef7<\u5f53\u524d MA5\uff08\u4e0e\u5c3e\u76d8\u6210\u672c\u6b62\u635f\u540c\u4e00\u65f6\u6bb5 tail_clear_start_hhmmss\uff09
 	g.tail_sell_below_ma5 = bool(getattr(C, 'tail_sell_below_ma5', True))
 	g.tail_ma5_period = max(2, int(getattr(C, 'tail_ma5_period', 5)))
+	# ATR\u6b62\u76c8\u5b9e\u5356\uff1a\u9ed8\u8ba4\u4ec5\u5728 tail_clear_start_hhmmss \u53ca\u4e4b\u540e\u4e0b\u5355\uff08\u4e0e\u5c3e\u76d8\u6210\u672c/MA5\u540c\u65f6\u6bb5\uff09
+	g.atr_take_profit_tail_only = bool(getattr(C, 'atr_take_profit_tail_only', True))
+	g.third_day_tail_clear_days = int(getattr(C, 'third_day_tail_clear_days', 3))
+	g.third_day_tail_clear_min_pnl = float(getattr(C, 'third_day_tail_clear_min_pnl', 0.05))
 	g.non_atr_sell_start_hhmmss = int(getattr(C, 'non_atr_sell_start_hhmmss', 145400))
+	# 卖出引擎：legacy=原策略；grid_d3=止损-6/止盈6/强势1%/最多D3/转弱0
+	g.sell_engine_mode = str(getattr(C, 'sell_engine_mode', 'grid_d3') or 'grid_d3').strip().lower()
+	if g.sell_engine_mode not in ('legacy', 'grid_d3'):
+		g.sell_engine_mode = 'legacy'
+	g.grid_stop_loss_pct = float(getattr(C, 'grid_stop_loss_pct', -0.07))
+	g.grid_take_profit_pct = float(getattr(C, 'grid_take_profit_pct', 0.07))
+	g.grid_strong_threshold_pct = float(getattr(C, 'grid_strong_threshold_pct', 0.005))
+	g.grid_max_hold_day = int(getattr(C, 'grid_max_hold_day', 3))
+	g.grid_weaken_threshold_pct = float(getattr(C, 'grid_weaken_threshold_pct', 0.00))
+	g.simple_log_mode = bool(getattr(C, 'simple_log_mode', True))
 	g.sell_unfilled_timeout_sec = float(getattr(C, 'sell_unfilled_timeout_sec', 60))
 	# 卖出必须成交：失败后持续撤单重挂，不设重试上限
 	g.sell_unfilled_max_retry = 0
@@ -1840,10 +2003,16 @@ def init(C):
 	g.atr_log_account_non_watchlist = bool(getattr(C, 'atr_log_account_non_watchlist', True))
 	g.use_tick_first = bool(getattr(C, 'use_tick_first', True))
 	g.signal_trace_log = bool(getattr(C, 'signal_trace_log', True))
-	g.minute_summary_log = bool(getattr(C, 'minute_summary_log', True))
+	g.minute_summary_log = bool(getattr(C, 'minute_summary_log', False))
 	g.position_summary_log = bool(getattr(C, 'position_summary_log', True))
 	g.sell_monitor_summary_log = bool(getattr(C, 'sell_monitor_summary_log', True))
 	g.monitor_account_risk_sells = bool(getattr(C, 'monitor_account_risk_sells', True))
+	if g.simple_log_mode:
+		g.tail_intraday_log = False
+		g.atr_intraday_log = False
+		g.atr_log_account_non_watchlist = False
+		g.signal_trace_log = False
+		# MIN/POS/MON 保留，便于核对持仓与门控状态
 	# \u672c\u65e5\u7b56\u7565\u5356\u51fa\u6210\u529f\u540e\u7981\u6b62\u518d\u9996\u4e70\u8be5\u7968\uff08\u907f\u514d\u5356\u540e\u51e0\u5206\u949f\u53c8\u88ab\u9996\u4e70\u903b\u8f91\u63a5\u56de\uff09
 	g.block_same_day_rebuy_after_sell = bool(getattr(C, 'block_same_day_rebuy_after_sell', True))
 	g.auto_remove_sold_from_watchlist = bool(getattr(C, 'auto_remove_sold_from_watchlist', False))
@@ -1925,11 +2094,15 @@ def init(C):
 	print('\u56de\u6d4b\u4e0d\u4e0b\u5355\uff1b\u5b9e\u76d8 passorder \u4e70=%d \u5356=%d' % (g.buy_code, g.sell_code))
 	print('signal_trace_log=%s minute_summary_log=%s position_summary_log=%s sell_monitor_summary_log=%s monitor_account_risk_sells=%s block_same_day_rebuy_after_sell=%s auto_remove_sold_from_watchlist=%s'
 	      % (g.signal_trace_log, g.minute_summary_log, g.position_summary_log, g.sell_monitor_summary_log, g.monitor_account_risk_sells, getattr(g, 'block_same_day_rebuy_after_sell', True), getattr(g, 'auto_remove_sold_from_watchlist', False)))
-	print('non_atr_sell_start_hhmmss=%d tail_clear_start=%06d tail_below_ma5=%s tail_ma5_period=%d tail_cost_stop_pct=%.4f sell_unfilled=%.0fs max_retry=%s tail_intraday_log=%s atr_intraday_log=%s atr_log_non_wl=%s'
-	      % (g.non_atr_sell_start_hhmmss, int(g.tail_clear_start_hhmmss), getattr(g, 'tail_sell_below_ma5', True), int(getattr(g, 'tail_ma5_period', 5)), float(g.tail_cost_stop_pct), float(g.sell_unfilled_timeout_sec),
+	print('non_atr_sell_start_hhmmss=%d tail_clear_start=%06d atr_tp_tail_only=%s tail_below_ma5=%s tail_ma5_period=%d tail_cost_stop_pct=%.4f sell_unfilled=%.0fs max_retry=%s tail_intraday_log=%s atr_intraday_log=%s atr_log_non_wl=%s'
+	      % (g.non_atr_sell_start_hhmmss, int(g.tail_clear_start_hhmmss), g.atr_take_profit_tail_only, g.tail_sell_below_ma5, int(g.tail_ma5_period), float(g.tail_cost_stop_pct), float(g.sell_unfilled_timeout_sec),
 	         ('\u65e0\u9650' if int(g.sell_unfilled_max_retry) <= 0 else int(g.sell_unfilled_max_retry)),
 	         g.tail_intraday_log, g.atr_intraday_log,
-	         getattr(g, 'atr_log_account_non_watchlist', True)))
+	         g.atr_log_account_non_watchlist))
+	print('sell_engine_mode=%s grid(sl=%.2f%% tp=%.2f%% strong=%.2f%% maxD=%d weaken=%.2f%%)'
+	      % (g.sell_engine_mode, g.grid_stop_loss_pct * 100.0, g.grid_take_profit_pct * 100.0,
+	         g.grid_strong_threshold_pct * 100.0, int(g.grid_max_hold_day), g.grid_weaken_threshold_pct * 100.0))
+	print('simple_log_mode=%s (关闭ATR/TRACE噪音；保留MIN/POS/MON/GRID与买卖信号)' % g.simple_log_mode)
 	print('session_gate_start=%06d session_gate_prefer_bar_time=%s gap_bracket_min=%06d A\u6863\u9996\u4e70=%06d-%06d(\u52a0\u4ed3\u817f\u5168\u5929...)'
 	      % (int(g.session_gate_start_hhmmss), g.session_gate_prefer_bar_time, int(g.gap_bracket_min_hhmmss),
 	         int(g.a_first_buy_start_hhmmss), int(g.a_first_buy_end_hhmmss)))
@@ -2158,6 +2331,8 @@ def _passorder_go(C, op_code, stock, volume, user_note):
 	vol = (vol // mos) * mos
 	if vol < mos:
 		return False
+	if _live_wall_before_session_gate(C):
+		return False
 	note = str(user_note or '')[:36].replace('|', '_')
 	po = _passorder_fn()
 	if po is None:
@@ -2189,7 +2364,22 @@ def _signal_buy_leg(C, stock, cash_yuan, price_now, dt_full, d_str, mos, tag, ti
 		_trace(dt_full, '当日已卖不再买入 stock=%s tag=%s' % (stock, tag))
 		_mr_set('当日已卖不回补 %s' % stock, 0, price_now)
 		return False
-	sh = _shares_for_cash(cash_yuan, price_now, mos)
+	cash_use = float(cash_yuan)
+	cap_amt = float(getattr(g, 'per_stock_max_amount', 0) or 0)
+	if cap_amt > 0:
+		cur_v, _ = _position_volume_and_avg(stock)
+		cur_sh = int(cur_v or 0)
+		if cur_sh <= 0:
+			cur_sh = int(g.buy_shares.get(stock, 0) or 0)
+		try:
+			remain_amt = cap_amt - float(cur_sh) * float(price_now)
+		except (TypeError, ValueError):
+			remain_amt = 0.0
+		if remain_amt <= 0:
+			_mr_set('单票金额上限已满 %s cap=%.0f' % (stock, cap_amt), 0, price_now)
+			return False
+		cash_use = min(cash_use, remain_amt)
+	sh = _shares_for_cash(cash_use, price_now, mos)
 	if sh < mos:
 		_mr_set('\u4e70\u4fe1\u53f7\u80a1\u6570\u4e0d\u8db3\u6700\u5c0f\u624b %s' % tag, 0, price_now)
 		return False
@@ -2453,6 +2643,8 @@ def _print_sell_signal(C, dt_full, stock, sh, px, reason, tick_map=None):
 	sh = (sh // mos) * mos
 	if sh < mos:
 		return False
+	if _live_wall_before_session_gate(C):
+		return False
 	tot_vol, avg_c = _position_volume_and_avg(stock)
 	cur_px = float(px) if px is not None and float(px) > 0 else None
 	try:
@@ -2495,7 +2687,7 @@ def _print_sell_signal(C, dt_full, stock, sh, px, reason, tick_map=None):
 	g._mr_trade_stock = stock
 	mark = '[ORDER]' if (live and placed) else '[SIGNAL]'
 	print('%s %s[\u5356] %s %d\u80a1 px=%.3f |\u89c4\u5219\u7c7b=%s|\u89c4\u5219\u9879=%s|\u8be6\u60c5=%s'
-	      % (dt_full, mark, stock, sh, px, rb or '--', rk or '--', (det or '--')[:120]))
+	      % (dt_full, mark, stock, sh, float(cur_px), rb or '--', rk or '--', (det or '--')[:120]))
 	return True
 
 
@@ -2637,12 +2829,12 @@ def _run_tail_watchlist_cost_stop(C, dt_full, d_str, hhmmss, tick_map, mos):
 		h = int(hhmmss)
 	except (TypeError, ValueError):
 		return
-	if h < int(getattr(g, 'tail_clear_start_hhmmss', 145000)):
+	if h < int(g.tail_clear_start_hhmmss):
 		return
 	wl = getattr(g, '_mon_pool_codes', frozenset())
 	if not wl:
 		return
-	thr = float(getattr(g, 'tail_cost_stop_pct', getattr(g, 'hard_stop_pct', -0.08)))
+	thr = float(g.tail_cost_stop_pct)
 	acc_lp_map = _account_last_price_map(C)
 	for st0 in sorted(wl):
 		st = _canonical_stock_code(st0) or st0
@@ -2689,10 +2881,16 @@ def _run_tail_watchlist_cost_stop(C, dt_full, d_str, hhmmss, tick_map, mos):
 				C, st, dt_full, tick_map, float(px_live), account_last=float(alp) if alp_ok else None)
 			px = float(px_mx) if (px_mx is not None and float(px_mx) > 0) else float(px_live)
 			reason = None
-			if float(px_live) / float(avg_c) - 1.0 <= thr:
+			pnl_now = float(px_live) / float(avg_c) - 1.0
+			day_n = int(_stock_hold_days(st, d_str))
+			td_days = int(getattr(g, 'third_day_tail_clear_days', 3))
+			td_min = float(getattr(g, 'third_day_tail_clear_min_pnl', 0.05))
+			if day_n >= td_days and pnl_now < td_min:
+				reason = _fmt_sell_rule('尾盘', '%d天弱势清仓' % td_days, '持仓盈亏=%.2f%% < %.2f%%(尾盘)' % (pnl_now * 100.0, td_min * 100.0))
+			elif pnl_now <= thr:
 				reason = _fmt_sell_rule('\u5c3e\u76d8', '\u6210\u672c\u6b62\u635f', '\u76c8\u4e8f\u2264%.1f%%(\u76f8\u5bf9\u6210\u672c,\u95e8\u63a7>=tail_clear)' % (thr * 100.0))
-			elif bool(getattr(g, 'tail_sell_below_ma5', True)):
-				mp = int(getattr(g, 'tail_ma5_period', 5))
+			elif g.tail_sell_below_ma5:
+				mp = int(g.tail_ma5_period)
 				ma_line = _stock_ma_tail_live(C, st, dt_full, d_str, float(px_live), mp)
 				if ma_line is not None and float(ma_line) > 0 and float(px_live) < float(ma_line):
 					reason = _fmt_sell_rule('\u5c3e\u76d8', '\u7834\u5747\u7ebfMA%d' % mp, '\u73b0=%.3f MA=%.3f(\u4ef7<\u5747\u7ebf)' % (float(px_live), float(ma_line)))
@@ -2740,6 +2938,18 @@ def _is_qmt_backtest_context(C):
 	return False
 
 
+def _live_wall_before_session_gate(C):
+	"""\u5b9e\u76d8\uff1a\u672c\u673a\u5899\u949f\u5c1a\u672a\u5230 session_gate_start\uff08\u9ed8\u8ba4 9:25\uff09\u3002\u56de\u6d4b\u59cb\u7ec8 False\u3002"""
+	if _is_qmt_backtest_context(C):
+		return False
+	try:
+		w = int(datetime.datetime.now().strftime('%H%M%S'))
+	except Exception:
+		return False
+	g0 = int(getattr(g, 'session_gate_start_hhmmss', 92500))
+	return int(w) < int(g0)
+
+
 def _handlebar_should_run(C):
 	"""\u5b9e\u76d8\uff1a\u4ec5 is_last_bar \u4e3a True \u65f6\u8dd1\uff08\u672c\u6839 K \u5df2\u5b9a\u578b\uff09\u3002\u56de\u6d4b\uff1a\u6bcf\u6839\u5386\u53f2 K \u90fd\u8dd1\u3002"""
 	try:
@@ -2756,22 +2966,27 @@ def _handlebar_should_run(C):
 
 def _session_gate_pass(C, hhmmss, d_str=None):
 	"""\u7c97\u7565\u95e8\u63a7\uff1a\u5b9e\u76d8\u8981\u6c42 K \u7ebf\u65e5\u671f\u4e3a\u201c\u4eca\u5929\u201d\uff0c\u4e14\u65f6\u523b\u5728 session_gate_start~15:00\u3002
-	\u907f\u514d\u76d8\u524d\u4ecd\u5360\u7528\u6628\u65e5\u6536\u76d8 1m\uff08hhmmss=150000\uff09\u65f6\u88ab\u8bef\u5224\u4e3a\u201c\u4e0b\u5348\u5e02\u573a\u201d\u800c\u8d70\u5206\u6863/\u9996\u4e70\u903b\u8f91\u3002"""
+	\u5899\u949f\u672a\u5230 session_gate_start\uff08\u9ed8\u8ba4 9:25\uff09\u4e0d\u653e\u884c\uff0c\u907f\u514d K timetag \u5f02\u5e38\u65f6\u63d0\u524d\u4e0b\u5355\u3002
+	\u82e5\u5899\u949f\u5df2\u8fc7\u95e8\u800c bar \u65f6\u523b\u4ecd\u5047\uff08\u672a\u66f4\u65b0\u5230 9:25+\uff09\uff0c\u7528\u5899\u949f\u62ac\u5347 gi \u4ee5\u4e0d\u5361\u6b7b\u5728\u4f4e timetag\u3002"""
 	if d_str and _live_bar_before_calendar_today(d_str, C):
 		return False
 	try:
 		wall_hms = int(datetime.datetime.now().strftime('%H%M%S'))
 	except Exception:
 		wall_hms = None
+	g0 = int(getattr(g, 'session_gate_start_hhmmss', 92500))
+	if not _is_qmt_backtest_context(C) and wall_hms is not None and int(wall_hms) < g0:
+		return False
 	prefer_bar = bool(getattr(g, 'session_gate_prefer_bar_time', True))
 	gate = hhmmss if (prefer_bar and hhmmss is not None) else wall_hms
 	if gate is None:
-		return True
+		return bool(_is_qmt_backtest_context(C))
 	try:
 		gi = int(gate)
 	except Exception:
-		return True
-	g0 = int(getattr(g, 'session_gate_start_hhmmss', 92500))
+		return bool(_is_qmt_backtest_context(C))
+	if not _is_qmt_backtest_context(C) and wall_hms is not None and int(wall_hms) >= g0 and gi < g0:
+		gi = int(wall_hms)
 	return g0 <= gi <= 150000
 
 
@@ -2836,6 +3051,36 @@ def handlebar(C):
 			_emit_position_holdings(C, dt_full, d_str, tick_map)
 		except Exception as e:
 			print('%s [emit POS gate] %r' % (STRATEGY_TAG, e))
+		# 会话门控提前返回时，极简模式也输出一次网格锚定快照，便于重启后核对
+		# 墙钟未到 session_gate_start（默认 9:25）不拉日线，避免集合竞价前误用 K 线
+		try:
+			if (str(getattr(g, 'sell_engine_mode', 'legacy')).lower() == 'grid_d3' and bool(getattr(g, 'simple_log_mode', True))
+			    and (not _live_wall_before_session_gate(C))):
+				sl = float(getattr(g, 'grid_stop_loss_pct', -0.07))
+				tp = float(getattr(g, 'grid_take_profit_pct', 0.07))
+				cand_gate = set(pos_early or set())
+				# 非交易时段核对用途：不过滤自选池，先确保账户持仓都能输出 GRID 探针
+				#（是否在自选池可从 POS/MON 行判断）
+				for st0 in sorted(cand_gate):
+					st = _canonical_stock_code(st0) or st0
+					data_d = C.get_market_data_ex(
+						['close', 'open'], [st],
+						end_time=dt_full, period='1d', count=int(g.bar_count), subscribe=False
+					)
+					if st not in data_d:
+						continue
+					packed = _grid_resolve_d0_and_day_idx(data_d, st, d_str)
+					if not packed:
+						continue
+					series, today_idx, _tf, day_idx, d0_open, bdate_disp, anchor_source = packed
+					px_live = float(series[today_idx][2])
+					_emit_grid_anchor_line(
+						dt_full, st, day_idx, bdate_disp, d0_open,
+						float(d0_open) * (1.0 + sl), float(d0_open) * (1.0 + tp),
+						px_live, anchor_source
+					)
+		except Exception as e:
+			print('%s [emit GRID gate] %r' % (STRATEGY_TAG, e))
 		return
 
 	pos_codes = set()
@@ -2938,8 +3183,9 @@ def handlebar(C):
 	if not bool(getattr(g, 'require_sse_above_ma5_for_new', True)):
 		index_allow_new = True
 	if _vb() and idx_close is not None:
-		print('%s \u4e0a\u8bc1 T-1\u6536=%.2f T-1MA5=%.2f MA10=%.2f \u5f00\u65b0\u95e8\u63a7=%s \u6e05\u5168MA10=%s'
-		      % (d_str, idx_close, idx_ma5 or 0, idx_ma10 or 0, index_allow_new, index_liquidate_all))
+		liq_p = int(getattr(g, 'index_liquidate_ma_period', 10))
+		print('%s \u4e0a\u8bc1 T-1\u6536=%.2f T-1MA5=%.2f MA%d=%.2f \u5f00\u65b0\u95e8\u63a7=%s \u6e05\u5168MA%d=%s'
+		      % (d_str, idx_close, idx_ma5 or 0, liq_p, idx_ma10 or 0, index_allow_new, liq_p, index_liquidate_all))
 
 	try:
 		ph0 = _primary_holding_stock()
@@ -2993,11 +3239,14 @@ def handlebar(C):
 			return
 		if not _non_atr_sell_time_ok(hhmmss):
 			return
+		if hhmmss is None or int(hhmmss) < int(g.tail_clear_start_hhmmss):
+			return
 		if g._ma10_signal_latched:
 			return
 		g._ma10_signal_latched = True
 		wl = getattr(g, '_mon_pool_codes', frozenset())
-		print('%s [SIGNAL] \u4e0a\u8bc1\u6536\u76d8<\u7ebfMA10 \u4ec5\u6e05\u201c\u81ea\u9009\u6c60\u201d\u5185\u6301\u4ed3\uff08\u672c\u8f6e\u4e00\u6b21\uff0c\u5b9e\u76d8\u4e0b\u5356\uff09' % dt_full)
+		liq_p = int(getattr(g, 'index_liquidate_ma_period', 10))
+		print('%s [SIGNAL] \u4e0a\u8bc1\u6536\u76d8<\u7ebfMA%d \u4ec5\u6e05\u201c\u81ea\u9009\u6c60\u201d\u5185\u6301\u4ed3\uff08\u672c\u8f6e\u4e00\u6b21\uff0c\u5b9e\u76d8\u4e0b\u5356\uff09' % (dt_full, liq_p))
 		pos = []
 		_gtd = _get_trade_detail_data_fn()
 		if g.accid and _gtd:
@@ -3018,7 +3267,7 @@ def handlebar(C):
 				sh = int(getattr(p, 'm_nVolume', 0) or 0)
 				sh = (sh // mos) * mos
 				px = float(getattr(p, 'm_dLastPrice', 0) or 0)
-				_signal_sell_sim(C, st, _fmt_sell_rule('\u6307\u6570', '\u4e0a\u8bc1MA10\u6e05\u4ed3', '\u8d26\u6237\u6301\u4ed3\u53c2\u8003'), dt_full, sh, px, tick_map)
+				_signal_sell_sim(C, st, _fmt_sell_rule('\u6307\u6570', '\u4e0a\u8bc1MA%d\u6e05\u4ed3' % liq_p, '\u8d26\u6237\u6301\u4ed3\u53c2\u8003'), dt_full, sh, px, tick_map)
 			except Exception:
 				continue
 		for st in list(g.holding.keys()):
@@ -3038,11 +3287,14 @@ def handlebar(C):
 					except Exception:
 						pass
 					px = _get_current_price(C, st, dt_full, fb, tick_map) or fb or 0.0
-					_signal_sell_sim(C, st, _fmt_sell_rule('\u6307\u6570', '\u4e0a\u8bc1MA10\u6e05\u4ed3', '\u6a21\u62df\u6301\u4ed3\u6e05\u7a7a'), dt_full, sh, px, tick_map)
+					_signal_sell_sim(C, st, _fmt_sell_rule('\u6307\u6570', '\u4e0a\u8bc1MA%d\u6e05\u4ed3' % liq_p, '\u6a21\u62df\u6301\u4ed3\u6e05\u7a7a'), dt_full, sh, px, tick_map)
 
 	def run_risk_sell_signal():
-		if not _in_session_trade(hhmmss):
-			return
+		t_ar = int(g.tail_clear_start_hhmmss)
+		try:
+			h_sel = int(hhmmss)
+		except (TypeError, ValueError):
+			h_sel = 0
 		wl = getattr(g, '_mon_pool_codes', frozenset())
 		acc_lp_map = _account_last_price_map(C)
 		cand = set()
@@ -3052,8 +3304,39 @@ def handlebar(C):
 			ck = _canonical_stock_code(k) or k
 			if ck in wl:
 				cand.add(ck)
-		if getattr(g, 'monitor_account_risk_sells', True):
+		if g.monitor_account_risk_sells:
 			cand |= (set(pos_codes) & wl)
+		if not _in_session_trade(hhmmss):
+			# 非交易时段：在极简模式下输出持仓锚定快照，便于重启后核对 D0/止损/止盈
+			# 墙钟未到 session_gate_start 不拉日线（与早盘集合竞价前一致）
+			if (str(getattr(g, 'sell_engine_mode', 'legacy')).lower() == 'grid_d3' and bool(getattr(g, 'simple_log_mode', True))
+			    and (not _live_wall_before_session_gate(C))):
+				cand |= set(pos_codes or set())
+				cand |= set(_sim_hold_keys() or set())
+				sl = float(getattr(g, 'grid_stop_loss_pct', -0.07))
+				tp = float(getattr(g, 'grid_take_profit_pct', 0.07))
+				for stock in sorted(cand):
+					st = _canonical_stock_code(stock) or stock
+					try:
+						data_d = C.get_market_data_ex(
+							['close', 'open'], [st],
+							end_time=dt_full, period='1d', count=int(g.bar_count), subscribe=False
+						)
+						if st not in data_d:
+							continue
+						packed = _grid_resolve_d0_and_day_idx(data_d, st, d_str)
+						if not packed:
+							continue
+						series, today_idx, _tf, day_idx, d0_open, bdate_disp, anchor_source = packed
+						px_live = float(series[today_idx][2])
+						_emit_grid_anchor_line(
+							dt_full, st, day_idx, bdate_disp, d0_open,
+							float(d0_open) * (1.0 + sl), float(d0_open) * (1.0 + tp),
+							px_live, anchor_source
+						)
+					except Exception:
+						continue
+			return
 		for stock in sorted(cand):
 			if not stock:
 				continue
@@ -3092,7 +3375,7 @@ def handlebar(C):
 				if touch_hit:
 					prev_touch_day = g.prev_close_stop_touch_day.get(st)
 					g.prev_close_stop_touch_day[st] = d_str
-					if getattr(g, 'tail_intraday_log', True) and prev_touch_day != d_str:
+					if g.tail_intraday_log and prev_touch_day != d_str:
 						print('[\u6628\u6536\u6b62\u635f] \u65f6\u95f4=%s|\u4ee3\u7801=%s|\u9608\u503c=%.2f%%(\u73b0/\u6628\u6536-1)|\u6628\u6536=%.3f|\u73b0\u4ef7=%.3f|\u5f53\u524d=%.2f%%'
 						      % (dt_full, st, touch_pct * 100.0, prev_ref, float(px_live), (float(px_live) / float(prev_ref) - 1.0) * 100.0))
 
@@ -3125,16 +3408,7 @@ def handlebar(C):
 					if ac2 is not None and float(ac2) > 0:
 						avg_c = float(ac2)
 
-				if avg_c is not None and float(avg_c) > 0 and _in_session_trade(hhmmss):
-					try:
-						cost_pnl = float(px_live) / float(avg_c) - 1.0
-					except (TypeError, ValueError, ZeroDivisionError):
-						cost_pnl = None
-					if cost_pnl is not None and cost_pnl <= float(g.hard_stop_pct):
-						if _signal_sell_sim(C, st, _fmt_sell_rule('\u98ce\u63a7', '\u6210\u672c\u786c\u6b62\u635f', '\u9608\u503c%.1f%%(\u5168\u5929\u8fde\u7eed\u7ade\u4ef7)' % (float(g.hard_stop_pct) * 100.0)), dt_full, sh, px_live, tick_map):
-							continue
-
-				if touch_hit and _in_session_trade(hhmmss):
+				if touch_hit:
 					can_k = (_canonical_stock_code(st) or st, d_str)
 					if can_k not in g._intraday_prev_ref_stop_done:
 						if _signal_sell_sim(C, st, _fmt_sell_rule('\u98ce\u63a7', '\u6628\u6536\u6b62\u635f', '\u9608\u503c%.1f%%(\u5168\u5929\u76f8\u5bf9\u6628\u6536)' % (touch_pct * 100.0)), dt_full, sh, px_live, tick_map):
@@ -3143,6 +3417,53 @@ def handlebar(C):
 
 				if avg_c is None or avg_c <= 0:
 					continue
+
+				# 新卖出引擎（grid_d3）：止损-6/止盈6/强势1%/最多D3/转弱0
+				if str(getattr(g, 'sell_engine_mode', 'legacy')).lower() == 'grid_d3':
+					sl = float(getattr(g, 'grid_stop_loss_pct', -0.07))
+					tp = float(getattr(g, 'grid_take_profit_pct', 0.07))
+					strong_th = float(getattr(g, 'grid_strong_threshold_pct', 0.005))
+					max_d = max(1, int(getattr(g, 'grid_max_hold_day', 3)))
+					weaken_th = float(getattr(g, 'grid_weaken_threshold_pct', 0.00))
+
+					packed = _grid_resolve_d0_and_day_idx(data_d, st, d_str)
+					if packed:
+						series, today_idx, _tf, day_idx, d0_open, bdate_disp, anchor_source = packed
+						sl_px = float(d0_open) * (1.0 + sl)
+						tp_px = float(d0_open) * (1.0 + tp)
+						_emit_grid_anchor_line(dt_full, st, day_idx, bdate_disp, d0_open, sl_px, tp_px, float(px_live), anchor_source)
+
+						# 仅在 D1..Dmax 执行此网格；超过则按到期清仓处理
+						if day_idx >= 1:
+							d_open = float(series[today_idx][1])
+							if d_open <= d0_open * (1.0 + sl):
+								_signal_sell_sim(C, st, _fmt_sell_rule('网格', '开盘止损', 'D%d开盘=%.3f <= 止损价%.3f(D0=%.3f,%.1f%%)' % (day_idx, d_open, sl_px, d0_open, sl * 100.0)), dt_full, sh, px_live, tick_map)
+								continue
+							if d_open >= d0_open * (1.0 + tp):
+								_signal_sell_sim(C, st, _fmt_sell_rule('网格', '开盘止盈', 'D%d开盘=%.3f >= 止盈价%.3f(D0=%.3f,+%.1f%%)' % (day_idx, d_open, tp_px, d0_open, tp * 100.0)), dt_full, sh, px_live, tick_map)
+								continue
+
+							# 收盘规则仅在尾盘时段执行（避免盘中抖动触发）
+							if h_sel < t_ar:
+								continue
+
+							if day_idx == 1:
+								if float(px_live) < d0_open * (1.0 + strong_th):
+									_signal_sell_sim(C, st, _fmt_sell_rule('网格', 'D1不强卖出', 'D1收盘<D0*(1+%.1f%%)' % (strong_th * 100.0)), dt_full, sh, px_live, tick_map)
+								continue
+
+							if day_idx <= max_d:
+								if today_idx >= 1:
+									prev_close = float(series[today_idx - 1][2])
+									if prev_close > 0 and float(px_live) <= prev_close * (1.0 + weaken_th):
+										_signal_sell_sim(C, st, _fmt_sell_rule('网格', '转弱卖出', 'D%d现价=%.3f <= 前收阈值%.3f(前收=%.3f,%.1f%%)' % (day_idx, float(px_live), prev_close * (1.0 + weaken_th), prev_close, weaken_th * 100.0)), dt_full, sh, px_live, tick_map)
+										continue
+								if day_idx >= max_d:
+									_signal_sell_sim(C, st, _fmt_sell_rule('网格', '到期卖出', '最多持有到D%d收盘' % max_d), dt_full, sh, px_live, tick_map)
+									continue
+							else:
+								_signal_sell_sim(C, st, _fmt_sell_rule('网格', '超期卖出', '已超过D%d，立即清仓' % max_d), dt_full, sh, px_live, tick_map)
+								continue
 
 				bdate = _effective_buy_date(st, d_str)
 				try:
@@ -3161,16 +3482,20 @@ def handlebar(C):
 						   hold_shares=sh_raw, scope_tag='\u81ea\u9009', ref_high=ref_h,
 						   mult=m_atr, stop_floor=fl_atr, hh_daily_override=hh_ov, dh_cal=dh_cal,
 						   px_display=float(px_live))
+				if h_sel < t_ar:
+					continue
 				should_tp, note = _check_atr_take_profit_only(
 					dh_eff, highs, lows, closes, px_live, avg_c, ref_high=ref_h,
 					mult=m_atr, stop_floor=fl_atr, hh_daily_override=hh_ov)
 				if _vb():
 					print('%s [\u6b62\u76c8\u68c0\u67e5] %s %s' % (dt_full, st, note))
-				if should_tp:
-					_signal_sell_sim(C, st, _fmt_sell_rule('\u6b62\u76c8', 'ATR\u540a\u706f', note), dt_full, sh, px_live, tick_map)
+				if should_tp and sh >= mos:
+					reason = _fmt_sell_rule('\u6b62\u76c8', 'ATR\u540a\u706f', note)
+					_signal_sell_sim(C, st, reason, dt_full, sh, px_live, tick_map)
 			except Exception as e:
 				print('%s [\u98ce\u63a7\u5356\u5f02\u5e38] %s %s' % (dt_full, st, e))
-		_run_tail_watchlist_cost_stop(C, dt_full, d_str, hhmmss, tick_map, mos)
+		if str(getattr(g, 'sell_engine_mode', 'legacy')).lower() == 'legacy':
+			_run_tail_watchlist_cost_stop(C, dt_full, d_str, hhmmss, tick_map, mos)
 
 	def run_pyramid_and_entry_signal():
 		mhc = int(getattr(g, 'max_hold_count', 0) or 0)
@@ -3228,8 +3553,9 @@ def handlebar(C):
 		run_risk_sell_signal()
 		_emit_atr_non_watchlist_account_positions(C, dt_full, d_str, tick_map, getattr(g, '_mon_pool_codes', frozenset()))
 		if index_liquidate_all:
-			_mr_set('\u4e0a\u8bc1\u7834MA10\u672c\u6839\u5df2\u6267\u884c\u6e05\u4ed3\u5206\u652f(\u65e0\u65b0\u5f00/\u91d1\u5b57\u5854)')
-			_trace(dt_full, '\u672c\u6839\u5df2\u6309MA10\u6e05\u4ed3\u903b\u8f91\u5904\u7406\u5b8c \u8df3\u8fc7\u5f00\u65b0/\u91d1\u5b57\u5854')
+			liq_p = int(getattr(g, 'index_liquidate_ma_period', 10))
+			_mr_set('\u4e0a\u8bc1\u7834MA%d\u672c\u6839\u5df2\u6267\u884c\u6e05\u4ed3\u5206\u652f(\u65e0\u65b0\u5f00/\u91d1\u5b57\u5854)' % liq_p)
+			_trace(dt_full, '\u672c\u6839\u5df2\u6309MA%d\u6e05\u4ed3\u903b\u8f91\u5904\u7406\u5b8c \u8df3\u8fc7\u5f00\u65b0/\u91d1\u5b57\u5854' % liq_p)
 			return
 		run_pyramid_and_entry_signal()
 	except Exception as e:
