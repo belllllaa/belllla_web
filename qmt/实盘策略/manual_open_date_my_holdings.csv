@@ -1,3 +1,6 @@
-# open_date：开仓日 YYYYMMDD（交易日），与手工填写一致、不做自动改写
-code,open_date
-603119.SH,20260506
+# open_date：开仓日 YYYYMMDD（交易日），与手工填写一致、不做自动改写
+
+code,open_date
+
+603119.SH,20260506
+
