@@ -1,8 +1,15 @@
+import os
+import sys
 from pathlib import Path
+
 import pandas as pd
 
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPT_DIR not in sys.path:
+	sys.path.insert(0, _SCRIPT_DIR)
+from dafengniu_paths import ALL_COMBO_COMPARE_FILTERED_CSV  # noqa: E402
 
-CSV_PATH = Path(r"qmt/实盘策略/dafengniu_all_combo_compare_filtered.csv")
+CSV_PATH = Path(ALL_COMBO_COMPARE_FILTERED_CSV)
 CANVAS_PATH = Path(
     r"C:\Users\Dustin.hou\.cursor\projects\c-Users-Dustin-hou-belllla-web\canvases\dafengniu-grid-analysis.canvas.tsx"
 )

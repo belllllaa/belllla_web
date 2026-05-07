@@ -1,9 +1,17 @@
+import os
+import sys
+
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 
-src = r"qmt/实盘策略/dafengniu_open_window_metrics_qmt.csv"
-out = r"qmt/实盘策略/dafengniu_all_combo_compare_filtered.csv"
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPT_DIR not in sys.path:
+	sys.path.insert(0, _SCRIPT_DIR)
+from dafengniu_paths import ALL_COMBO_COMPARE_FILTERED_CSV, OPEN_WINDOW_METRICS_QMT_CSV  # noqa: E402
+
+src = OPEN_WINDOW_METRICS_QMT_CSV
+out = ALL_COMBO_COMPARE_FILTERED_CSV
 
 df = pd.read_csv(src)
 for c in [f"D{i}_开盘" for i in range(6)] + [f"D{i}_收盘" for i in range(6)]:

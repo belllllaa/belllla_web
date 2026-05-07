@@ -29,15 +29,20 @@ from __future__ import annotations
 import argparse
 import itertools
 import os
+import sys
 from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPT_DIR not in sys.path:
+	sys.path.insert(0, _SCRIPT_DIR)
+from dafengniu_paths import BUY_COMBO_VS_SELL_CSV, OPEN_WINDOW_METRICS_QMT_CSV  # noqa: E402
+
 ROOT = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", ".."))
-SRC = os.path.join(ROOT, "qmt", "实盘策略", "dafengniu_open_window_metrics_qmt.csv")
-OUT = os.path.join(ROOT, "qmt", "实盘策略", "dafengniu_buy_combo_vs_sell_compare.csv")
+SRC = OPEN_WINDOW_METRICS_QMT_CSV
+OUT = BUY_COMBO_VS_SELL_CSV
 OUT_GRID = os.path.join(ROOT, "qmt", "实盘策略", "dafengniu_buy_auto_weight_grid.csv")
 OUT_A_GAP_HI_SCAN = os.path.join(ROOT, "qmt", "实盘策略", "dafengniu_buy_a_gap_hi_scan.csv")
 OUT_A_GAP_GRID_SCAN = os.path.join(ROOT, "qmt", "实盘策略", "dafengniu_buy_a_gap_grid_scan.csv")

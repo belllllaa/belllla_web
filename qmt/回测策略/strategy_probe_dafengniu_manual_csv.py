@@ -42,7 +42,14 @@ def _strategy_base_dir():
 
 
 def _default_manual_csv():
-	return os.path.normpath(os.path.join(_strategy_base_dir(), '..', '\u5b9e\u76d8\u7b56\u7565', 'dafengniu_manual_open_dates.csv'))
+	base = _strategy_base_dir()
+	sync_p = os.path.normpath(
+		os.path.join(base, '..', '\u5b9e\u76d8\u7b56\u7565', '\u5927\u75af\u725b\u5996\u80a1\u6570\u636e', 'dafengniu_sync_open_dates.csv')
+	)
+	old_p = os.path.normpath(os.path.join(base, '..', '\u5b9e\u76d8\u7b56\u7565', 'dafengniu_manual_open_dates.csv'))
+	if os.path.isfile(sync_p):
+		return sync_p
+	return old_p
 
 
 def _load_pairs(path_str):

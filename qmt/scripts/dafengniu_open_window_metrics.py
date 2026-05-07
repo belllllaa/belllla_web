@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-读取 dafengniu_manual_open_dates.csv（默认与本脚本目录旁 qmt/实盘策略/），
+读取 dafengniu_sync_open_dates.csv（默认 qmt/实盘策略/大疯牛妖股数据/；否则回落 dafengniu_manual_open_dates.csv），
 对每个标的拉取日线（AkShare 前复权），计算开仓日（含）起连续 6 个交易日：
 开盘价、收盘价、MA5、MA10；并输出两项标签：
   - 开仓日起连续 3 个交易日每日开盘 > 收盘
@@ -22,18 +22,19 @@ import sys
 import time
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_REPO_QMT = os.path.normpath(os.path.join(_SCRIPT_DIR, ".."))
-_DEFAULT_IN = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "实盘策略", "dafengniu_manual_open_dates.csv"))
-_DEFAULT_OUT = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "实盘策略", "dafengniu_open_window_metrics.csv"))
 
 if _SCRIPT_DIR not in sys.path:
 	sys.path.insert(0, _SCRIPT_DIR)
 
+from dafengniu_paths import MANUAL_OPEN_DATES_LEGACY_CSV, SYNC_OPEN_DATES_CSV  # noqa: E402
 from dafengniu_metrics_core import (  # noqa: E402
 	akshare_hist_to_daily_df,
 	compute_window_metrics_from_daily,
 	yyyymmdd_shift,
 )
+
+_DEFAULT_IN = SYNC_OPEN_DATES_CSV if os.path.isfile(SYNC_OPEN_DATES_CSV) else MANUAL_OPEN_DATES_LEGACY_CSV
+_DEFAULT_OUT = os.path.normpath(os.path.join(_SCRIPT_DIR, "..", "实盘策略", "dafengniu_open_window_metrics.csv"))
 
 
 def load_manual_pairs(path: str) -> list[tuple[str, str]]:

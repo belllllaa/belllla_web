@@ -33,8 +33,12 @@ from datetime import date, datetime
 import pandas as pd
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if _REPO_ROOT not in sys.path:
 	sys.path.insert(0, _REPO_ROOT)
+if _SCRIPT_DIR not in sys.path:
+	sys.path.insert(0, _SCRIPT_DIR)
+from dafengniu_paths import DIR_DFN_DATA  # noqa: E402
 
 
 def _excel_serial_to_date(v: float) -> date | None:
@@ -197,7 +201,9 @@ def main():
 		if prev is None or open_yyyymmdd < prev:
 			open_by_code[cc] = open_yyyymmdd
 
-	detail_path = os.path.join(out_dir, "dafengniu_holdings_detail.csv")
+	detail_dir = os.path.join(out_dir, os.path.basename(DIR_DFN_DATA))
+	os.makedirs(detail_dir, exist_ok=True)
+	detail_path = os.path.join(detail_dir, "dafengniu_holdings_detail.csv")
 	manual_path = os.path.join(out_dir, "dafengniu_manual_open_dates.csv")
 
 	pd.DataFrame(rows_detail).to_csv(detail_path, index=False, encoding="utf-8-sig")

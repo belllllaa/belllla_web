@@ -1,0 +1,282 @@
+{
+  "csv": "c:\\Users\\admin\\Projects\\belllla_web\\qmt\\实盘策略\\dafengniu_open_window_metrics_qmt.csv",
+  "n_pairs": 300,
+  "n_csv_rows": 200,
+  "best": {
+    "a_lo_pct": -0.5,
+    "a_hi_pct": 2.5,
+    "n": 160,
+    "win_rate_pct": 48.12,
+    "mean_return_pct": 1.5005,
+    "sum_return_pct": 240.0757,
+    "nav_chain": 6.663317,
+    "is_baseline": false
+  },
+  "baseline": {
+    "a_lo_pct": -5.0,
+    "a_hi_pct": 3.0,
+    "n": 190,
+    "win_rate_pct": 46.32,
+    "mean_return_pct": 1.1586,
+    "sum_return_pct": 220.1343,
+    "nav_chain": 4.995395,
+    "is_baseline": true
+  },
+  "top25": [
+    {
+      "a_lo_pct": -0.5,
+      "a_hi_pct": 2.5,
+      "n": 160,
+      "win_rate_pct": 48.12,
+      "mean_return_pct": 1.5005,
+      "sum_return_pct": 240.0757,
+      "nav_chain": 6.663317,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -0.5,
+      "a_hi_pct": 2.0,
+      "n": 150,
+      "win_rate_pct": 48.0,
+      "mean_return_pct": 1.384,
+      "sum_return_pct": 207.6,
+      "nav_chain": 4.933652,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -0.5,
+      "a_hi_pct": 3.0,
+      "n": 165,
+      "win_rate_pct": 47.88,
+      "mean_return_pct": 1.3891,
+      "sum_return_pct": 229.1938,
+      "nav_chain": 5.922292,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -0.5,
+      "a_hi_pct": 3.5,
+      "n": 165,
+      "win_rate_pct": 47.88,
+      "mean_return_pct": 1.3891,
+      "sum_return_pct": 229.1938,
+      "nav_chain": 5.922292,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -0.5,
+      "a_hi_pct": 4.0,
+      "n": 165,
+      "win_rate_pct": 47.88,
+      "mean_return_pct": 1.3891,
+      "sum_return_pct": 229.1938,
+      "nav_chain": 5.922292,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -0.5,
+      "a_hi_pct": 4.5,
+      "n": 165,
+      "win_rate_pct": 47.88,
+      "mean_return_pct": 1.3891,
+      "sum_return_pct": 229.1938,
+      "nav_chain": 5.922292,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -0.5,
+      "a_hi_pct": 5.0,
+      "n": 165,
+      "win_rate_pct": 47.88,
+      "mean_return_pct": 1.3891,
+      "sum_return_pct": 229.1938,
+      "nav_chain": 5.922292,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -0.5,
+      "a_hi_pct": 5.5,
+      "n": 165,
+      "win_rate_pct": 47.88,
+      "mean_return_pct": 1.3891,
+      "sum_return_pct": 229.1938,
+      "nav_chain": 5.922292,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -0.5,
+      "a_hi_pct": 6.0,
+      "n": 165,
+      "win_rate_pct": 47.88,
+      "mean_return_pct": 1.3891,
+      "sum_return_pct": 229.1938,
+      "nav_chain": 5.922292,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -0.5,
+      "a_hi_pct": 6.5,
+      "n": 165,
+      "win_rate_pct": 47.88,
+      "mean_return_pct": 1.3891,
+      "sum_return_pct": 229.1938,
+      "nav_chain": 5.922292,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -0.5,
+      "a_hi_pct": 7.0,
+      "n": 165,
+      "win_rate_pct": 47.88,
+      "mean_return_pct": 1.3891,
+      "sum_return_pct": 229.1938,
+      "nav_chain": 5.922292,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -0.5,
+      "a_hi_pct": 1.5,
+      "n": 136,
+      "win_rate_pct": 47.79,
+      "mean_return_pct": 1.3951,
+      "sum_return_pct": 189.729,
+      "nav_chain": 4.203543,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -1.0,
+      "a_hi_pct": 2.5,
+      "n": 170,
+      "win_rate_pct": 47.06,
+      "mean_return_pct": 1.4512,
+      "sum_return_pct": 246.7054,
+      "nav_chain": 6.86373,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -1.0,
+      "a_hi_pct": 2.0,
+      "n": 160,
+      "win_rate_pct": 46.88,
+      "mean_return_pct": 1.3389,
+      "sum_return_pct": 214.2297,
+      "nav_chain": 5.082041,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -1.0,
+      "a_hi_pct": 3.0,
+      "n": 175,
+      "win_rate_pct": 46.86,
+      "mean_return_pct": 1.3476,
+      "sum_return_pct": 235.8235,
+      "nav_chain": 6.100417,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -1.0,
+      "a_hi_pct": 3.5,
+      "n": 175,
+      "win_rate_pct": 46.86,
+      "mean_return_pct": 1.3476,
+      "sum_return_pct": 235.8235,
+      "nav_chain": 6.100417,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -1.0,
+      "a_hi_pct": 4.0,
+      "n": 175,
+      "win_rate_pct": 46.86,
+      "mean_return_pct": 1.3476,
+      "sum_return_pct": 235.8235,
+      "nav_chain": 6.100417,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -1.0,
+      "a_hi_pct": 4.5,
+      "n": 175,
+      "win_rate_pct": 46.86,
+      "mean_return_pct": 1.3476,
+      "sum_return_pct": 235.8235,
+      "nav_chain": 6.100417,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -1.0,
+      "a_hi_pct": 5.0,
+      "n": 175,
+      "win_rate_pct": 46.86,
+      "mean_return_pct": 1.3476,
+      "sum_return_pct": 235.8235,
+      "nav_chain": 6.100417,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -1.0,
+      "a_hi_pct": 5.5,
+      "n": 175,
+      "win_rate_pct": 46.86,
+      "mean_return_pct": 1.3476,
+      "sum_return_pct": 235.8235,
+      "nav_chain": 6.100417,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -1.0,
+      "a_hi_pct": 6.0,
+      "n": 175,
+      "win_rate_pct": 46.86,
+      "mean_return_pct": 1.3476,
+      "sum_return_pct": 235.8235,
+      "nav_chain": 6.100417,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -1.0,
+      "a_hi_pct": 6.5,
+      "n": 175,
+      "win_rate_pct": 46.86,
+      "mean_return_pct": 1.3476,
+      "sum_return_pct": 235.8235,
+      "nav_chain": 6.100417,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -1.0,
+      "a_hi_pct": 7.0,
+      "n": 175,
+      "win_rate_pct": 46.86,
+      "mean_return_pct": 1.3476,
+      "sum_return_pct": 235.8235,
+      "nav_chain": 6.100417,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -0.0,
+      "a_hi_pct": 2.5,
+      "n": 141,
+      "win_rate_pct": 46.81,
+      "mean_return_pct": 1.2555,
+      "sum_return_pct": 177.0325,
+      "nav_chain": 3.706739,
+      "is_baseline": false
+    },
+    {
+      "a_lo_pct": -1.0,
+      "a_hi_pct": 1.5,
+      "n": 146,
+      "win_rate_pct": 46.58,
+      "mean_return_pct": 1.3449,
+      "sum_return_pct": 196.3587,
+      "nav_chain": 4.329973,
+      "is_baseline": false
+    }
+  ],
+  "summary": {
+    "max_win_rate": 48.12,
+    "max_mean_return": 1.5005,
+    "max_nav": 6.86373
+  }
+}

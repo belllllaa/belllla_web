@@ -4,11 +4,18 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
+import os
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SRC = ROOT / "qmt" / "实盘策略" / "dafengniu_open_window_metrics_qmt.csv"
-OUT = ROOT / "qmt" / "实盘策略" / "dafengniu_grid_ext_sl7_tp7_th05_d0_D3_w0_trades.csv"
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPT_DIR not in sys.path:
+	sys.path.insert(0, _SCRIPT_DIR)
+from dafengniu_paths import GRID_EXT_TRADES_CSV, OPEN_WINDOW_METRICS_QMT_CSV  # noqa: E402
+
+SRC = Path(OPEN_WINDOW_METRICS_QMT_CSV)
+OUT = Path(GRID_EXT_TRADES_CSV)
 # 同步写一份到脚本目录（纯 ASCII 路径，避免 IDE 用错误 URI 打不开「实盘策略」下文件）
 OUT_ASCII = Path(__file__).resolve().parent / "dafengniu_grid_ext_sl7_tp7_th05_d0_D3_w0_trades.csv"
 

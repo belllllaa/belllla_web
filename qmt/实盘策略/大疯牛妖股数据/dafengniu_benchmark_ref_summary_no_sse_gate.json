@@ -1,0 +1,25 @@
+{
+  "输入CSV": "C:\\Users\\admin\\Projects\\belllla_web\\qmt\\实盘策略\\大疯牛妖股数据\\dafengniu_sync_open_baostock.csv",
+  "输出明细": "C:\\Users\\admin\\Projects\\belllla_web\\qmt\\实盘策略\\大疯牛妖股数据\\dafengniu_benchmark_ref_trades_no_sse_gate.csv",
+  "require_sse_above_ma5_for_new": false,
+  "sse_tail_exit": "ma10",
+  "成交笔数": 264,
+  "收益合计_pct": 350.0524,
+  "单笔均值_pct": 1.326,
+  "单笔标准差_pct": 7.8375,
+  "夏普_笔收益": 0.1692,
+  "胜率_pct": 49.6212,
+  "盈利笔数": 131,
+  "波动率_笔收益标准差_pct": 7.8375,
+  "最大回撤_链式净值_pct": 64.7217,
+  "盈亏比_均盈除以均亏绝对值": 1.5331,
+  "盈亏比_总盈利除以总亏损绝对值": 1.5449,
+  "跳过统计": {
+    "gate_ma5": 0,
+    "no_bracket": 0,
+    "no_buy_trigger": 53,
+    "bad_gap_data": 3,
+    "no_calendar": 9,
+    "sim_fail": 0
+  }
+}

@@ -74,10 +74,15 @@ def compute_window_metrics_from_daily(
 	d: pd.DataFrame,
 	open_yyyymmdd: str,
 	code: str,
+	*,
+	allow_incomplete_window: bool = False,
 ) -> tuple[WindowMetrics | None, str | None]:
 	"""
 	d 列：date, open, high, low, close（均为数值；date 可 datetime）
 	按日期升序；需包含开仓日前至少 9 个交易日以保证 MA10，窗口内 MA 与行情一致。
+
+	allow_incomplete_window：为 True 时，若开仓日后不足 6 个交易日（长假/数据尚未更新），
+	仍输出已有交易日的 D0…Dn，其余 D 列为空；标签按已有窗口计算。默认 False 保持与 QMT 导出一致。
 	"""
 	if d is None or d.empty:
 		return None, "empty"
@@ -101,9 +106,13 @@ def compute_window_metrics_from_daily(
 		return None, hint or "no_position"
 
 	if pos + N_WINDOW_DAYS > len(work):
-		return None, "short_tail"
-
-	win = work.iloc[pos : pos + N_WINDOW_DAYS]
+		if not allow_incomplete_window:
+			return None, "short_tail"
+		if pos >= len(work):
+			return None, "short_tail"
+		win = work.iloc[pos:]
+	else:
+		win = work.iloc[pos : pos + N_WINDOW_DAYS]
 
 	# 标签1：开仓日起连续 3 个交易日，每日开盘 > 收盘（实体阴线）
 	tag_3_oc = True

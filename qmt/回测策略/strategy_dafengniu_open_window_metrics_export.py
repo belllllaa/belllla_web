@@ -368,6 +368,7 @@ def _iter_manual_csv_candidates():
 	name = _MANUAL_CSV_NAME
 	base = _base_dir()
 	for p in (
+		os.path.normpath(os.path.join(base, '..', '\u5b9e\u76d8\u7b56\u7565', '\u5927\u75af\u725b\u5996\u80a1\u6570\u636e', 'dafengniu_sync_open_dates.csv')),
 		default_dafengniu_manual_csv_path(),
 		os.path.normpath(os.path.join(base, '..', 'dafengniu_csv', name)),
 		os.path.normpath(os.path.join(base, '..', '\u5b9e\u76d8\u7b56\u7565', name)),
@@ -428,10 +429,14 @@ def resolve_dafengniu_export_csv(context_raw, manual_resolved_path):
 	cr = (context_raw or '').strip()
 	if cr:
 		return os.path.normpath(os.path.abspath(cr)), 'context'
+	live_dir = os.path.normpath(os.path.join(_base_dir(), '..', '\u5b9e\u76d8\u7b56\u7565'))
+	out_live = os.path.normpath(os.path.join(live_dir, _EXPORT_CSV_NAME))
+	if os.path.isdir(live_dir):
+		return out_live, 'live_strategy_dir'
 	base_dir = os.path.dirname(manual_resolved_path)
 	if base_dir and os.path.isdir(base_dir):
 		return os.path.normpath(os.path.join(base_dir, _EXPORT_CSV_NAME)), 'same_dir_as_manual'
-	return os.path.normpath(os.path.join(_base_dir(), '..', '\u5b9e\u76d8\u7b56\u7565', _EXPORT_CSV_NAME)), 'fallback_default'
+	return out_live, 'fallback_default'
 
 
 def _normalize_csv_cell(s):

@@ -1,0 +1,55 @@
+{
+  "输入": "C:\\Users\\admin\\Projects\\belllla_web\\qmt\\实盘策略\\大疯牛妖股数据\\dafengniu_sync_open_baostock.csv",
+  "require_sse_above_ma5": true,
+  "固定卖出": {
+    "sl": -0.1,
+    "tp": 0.065,
+    "sl_intraday": -0.1,
+    "tp_intraday": 0.065,
+    "d1_weak": 0.005,
+    "sse_tail_exit": "ma5",
+    "max_day": 3,
+    "skip_intraday": false
+  },
+  "仓库基准买入参数_对照": {
+    "A_LO": -0.05,
+    "A_HI": 0.03,
+    "B_HI": 0.07,
+    "B_MULT": 0.97,
+    "C_MULT": 0.96
+  },
+  "方案1_边界网格": {
+    "A_LO": [
+      -0.06,
+      -0.05,
+      -0.04
+    ],
+    "A_HI": [
+      0.02,
+      0.03,
+      0.04
+    ],
+    "B_HI": [
+      0.06,
+      0.07,
+      0.08
+    ]
+  },
+  "方案2_折扣网格": {
+    "B_MULT": [
+      0.96,
+      0.97,
+      0.98
+    ],
+    "C_MULT": [
+      0.95,
+      0.96,
+      0.97
+    ]
+  },
+  "D0开盘锚定份额加权": "dafengniu_d0_gap_position_weights.ANCHOR_WEIGHT_BY_LABEL；单笔贡献=份额×笔收益%；加权收益率合计_pct = Σ(w×r)/GAP_WEIGHT_DISPLAY_REF（默认0.5），与收益合计_pct同量纲；固定份额0p5_合计_pct = 0.5×Σr 为对照",
+  "coarse": false,
+  "约计笛卡尔积行数": 243,
+  "输出_csv": "C:\\Users\\admin\\Projects\\belllla_web\\qmt\\实盘策略\\测试组合表格\\dafengniu_buy_combo_scan_round_1_2.csv",
+  "行数_实际": 243
+}

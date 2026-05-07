@@ -3,10 +3,10 @@
 根据 holdings 明细导出“信号分析特征表”。
 
 输入默认：
-  qmt/实盘策略/dafengniu_holdings_detail.csv
+  qmt/实盘策略/大疯牛妖股数据/dafengniu_holdings_detail.csv
 
 输出默认：
-  qmt/实盘策略/dafengniu_signal_features.csv
+  qmt/实盘策略/大疯牛妖股数据/dafengniu_signal_features.csv
 
 导出字段（核心）：
   - 代码, 简称, 入选日, 开仓日
@@ -25,11 +25,18 @@
 from __future__ import annotations
 
 import argparse
+import os
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Tuple
 
 import pandas as pd
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPT_DIR not in sys.path:
+	sys.path.insert(0, _SCRIPT_DIR)
+from dafengniu_paths import HOLDINGS_DETAIL_CSV, SIGNAL_FEATURES_CSV  # noqa: E402
 
 N_WINDOW = 6
 
@@ -125,8 +132,8 @@ def calc_sse_t1_above_ma5(sse_df: pd.DataFrame, open_d8: str) -> Optional[int]:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--input", "-i", default=r"qmt/实盘策略/dafengniu_holdings_detail.csv", help="源明细CSV")
-    ap.add_argument("--out", "-o", default=r"qmt/实盘策略/dafengniu_signal_features.csv", help="输出CSV")
+    ap.add_argument("--input", "-i", default=HOLDINGS_DETAIL_CSV, help="源明细CSV")
+    ap.add_argument("--out", "-o", default=SIGNAL_FEATURES_CSV, help="输出CSV")
     ap.add_argument("--sleep", type=float, default=0.15, help="单票间隔秒")
     ap.add_argument("--limit", type=int, default=0, help="仅处理前N行（调试）")
     args = ap.parse_args()
