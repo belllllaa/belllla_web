@@ -13,6 +13,7 @@ DEFAULT_SELL_WATCH_CSV_PATH = (
 )
 SESSION_AM_START, SESSION_AM_END = 92500, 113000
 SESSION_PM_START, SESSION_PM_END = 130000, 150000
+TP_MONITOR_AM_START = 93000  # 16%止盈盘中监控：9:30开盘至收盘
 SELL_WINDOW_START, SELL_WINDOW_END = 145500, 150000
 REMARK_PREFIX = 'YDS'
 DEFAULT_ACCID = '30262698'
@@ -180,6 +181,17 @@ def _in_sell_window(hms):
 	return _in_time_window(hms, SELL_WINDOW_START, SELL_WINDOW_END)
 
 
+def _in_tp_monitor_session(hms):
+	"""16%止盈盘中监控：上午9:30-11:30、下午13:00-15:00。"""
+	if hms is None:
+		return False
+	try:
+		h = int(hms)
+	except (TypeError, ValueError):
+		return False
+	return (TP_MONITOR_AM_START <= h <= SESSION_AM_END) or (SESSION_PM_START <= h <= SESSION_PM_END)
+
+
 def _current_hhmmss(C):
 	return getattr(g, '_handlebar_hhmmss', None) if _is_qmt_backtest_context(C) else _wall_hhmmss()
 
@@ -195,7 +207,7 @@ def _passorder_time_ok(C, sell_reason=None):
 	if SELL_WINDOW_START <= h <= SELL_WINDOW_END:
 		return True
 	if _is_tp_sell_reason(sell_reason):
-		return (SESSION_AM_START <= h <= SESSION_AM_END) or (SESSION_PM_START <= h <= SESSION_PM_END)
+		return _in_tp_monitor_session(h)
 	return False
 
 
@@ -1329,7 +1341,7 @@ def init(C):
 		print('%s [WARN] CSV\u672a\u627e\u5230: \u8bf7\u5c06 %s \u653e\u5230\u7b56\u7565\u76ee\u5f55\uff0c\u6216\u5728\u7b56\u7565\u53c2\u6570\u8bbe ContextInfo.sell_watch_csv_path \u4e3a\u7edd\u5bf9\u8def\u5f84' % (
 			STRATEGY_TAG, DEFAULT_CSV))
 		print('%s [WARN] \u4ea6\u53ef\u8bbe\u73af\u5883\u53d8\u91cf YIDONG_SELL_WATCH_CSV \u6216\u628a\u6587\u4ef6\u590d\u5236\u5230 QMT bin \u76ee\u5f55' % (STRATEGY_TAG,))
-	print('%s \u6b62\u76c8\u76d8\u4e2d09:25-15:00\u89e6\u8fbe\u5373\u5356(\u9650\u4ef7=\u6b62\u76c8\u4ef7); \u5c3e\u76d814:55-15:00 discount=%.2f%% stop=%.0f%%(CSV\u5f00\u4ed3\u4ef7,T+%d\u8d77) tp=%.0f%% max_hold=%d wd=%ds retry=%d live=%s' % (
+	print('%s \u6b62\u76c8\u76d8\u4e2d09:30-15:00\u89e6\u8fbe\u5373\u5356(\u9650\u4ef7=\u6b62\u76c8\u4ef7); \u5c3e\u76d814:55-15:00 discount=%.2f%% stop=%.0f%%(CSV\u5f00\u4ed3\u4ef7,T+%d\u8d77) tp=%.0f%% max_hold=%d wd=%ds retry=%d live=%s' % (
 		STRATEGY_TAG, g.sell_discount_pct * 100, g.stop_loss_pct, g.stop_min_hold_days,
 		g.take_profit_pct, g.max_hold_days,
 		g.withdraw_secs, g.max_retry, g.live_orders))
@@ -1370,7 +1382,8 @@ def handlebar(C):
 		return
 	pos_map = _positions()
 	tp_stats = {}
-	_run_sell_pass(C, bar_dt, d_str, watch, pos_map, tp_stats, tp_only=True)
+	if wall is not None and _in_tp_monitor_session(wall):
+		_run_sell_pass(C, bar_dt, d_str, watch, pos_map, tp_stats, tp_only=True)
 	if tp_stats.get('order_ok'):
 		_scan_summary(bar_dt, tp_stats, 'mode=tp_intraday csv=%d' % len(watch))
 	if not in_sell:
