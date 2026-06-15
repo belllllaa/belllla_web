@@ -8,6 +8,7 @@ DEFAULT_SECTOR = '\u5361\u5f02\u52a8\u5f00\u76d8\u4e70\u5165\u6c60'
 SESSION_AM_START, SESSION_AM_END = 92500, 113000
 SESSION_PM_START, SESSION_PM_END = 130000, 150000
 BUY_WINDOW_START, BUY_WINDOW_END = 92500, 93559
+NO_RETRY_UNTIL_HMS = 93000  # 9:30前不因未成交撤单重挂(集合竞价委托状态不可见)
 REMARK_PREFIX = 'YDO'
 DEFAULT_ACCID = '30262698'
 DEFAULT_MAX_AMOUNT_PER_STOCK = 100000.0
@@ -123,6 +124,17 @@ def _in_buy_window(hms):
 	except (TypeError, ValueError):
 		return False
 	return BUY_WINDOW_START <= h <= BUY_WINDOW_END
+
+
+def _in_auction_no_retry_window(hms):
+	"""9:25-9:30 集合竞价期间系统不显示委托结果，跳过撤单重挂。"""
+	if hms is None:
+		return False
+	try:
+		h = int(hms)
+	except (TypeError, ValueError):
+		return False
+	return BUY_WINDOW_START <= h < NO_RETRY_UNTIL_HMS
 
 
 def _wall_hhmmss():
@@ -480,6 +492,9 @@ def _repost_buy(C, pinfo, nr):
 def _cancel_retry(C):
 	if not g.waiting_list:
 		return
+	cur_hms = getattr(g, '_handlebar_hhmmss', None) if _is_qmt_backtest_context(C) else _wall_hhmmss()
+	if _in_auction_no_retry_window(cur_hms):
+		return
 	gtd, cancel = _get_trade_detail_data_fn(), _cancel_fn()
 	if not gtd:
 		return
@@ -739,7 +754,7 @@ def init(C):
 	print('%s init acc=%s sector=%r cap=%.0f prem=%.2f%%+step%.2f%% wd=%ds retry=%d live=%s' % (
 		STRATEGY_TAG, g.accid, g.sector_name, g.max_amount_per_stock,
 		g.buy_premium_pct * 100, g.buy_premium_retry_step * 100, g.withdraw_secs, g.max_retry, g.live_orders))
-	print('%s \u677f\u575724h\u76d1\u63a7 \u672a\u6210\u4ea4%d\u79d2\u64a4\u5355\u91cd\u6302 \u4e70\u516509:25-09:35 run_time=%s \u5907\u6ce8=%s_*' % (
+	print('%s \u677f\u575724h\u76d1\u63a7 \u672a\u6210\u4ea4%d\u79d2\u64a4\u5355\u91cd\u6302(09:25-09:30\u4e0d\u64a4\u5355\u91cd\u6302) \u4e70\u516509:25-09:35 run_time=%s \u5907\u6ce8=%s_*' % (
 		STRATEGY_TAG, g.withdraw_secs, ('on' if g.auction_timer else 'off'), REMARK_PREFIX))
 	print('=' * 64)
 
